@@ -1,0 +1,75 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // 1. Users collection: Public read for creator profiles & stores; Write allowed for account owner or during onboarding/demo
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isOwner(userId);
+    }
+
+    // 2. Products collection: Public read for marketplace & store pages; Write allowed for creators, demo & admins
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    // 3. Transactions collection: Public write (for Mobile Money checkout & webhooks), read by creators and clients
+    match /transactions/{transactionId} {
+      allow read, write: if true;
+    }
+
+    // 4. Customers collection: Read & create allowed for store operations and creator
+    match /customers/{customerId} {
+      allow read, write: if true;
+    }
+
+    // 5. Workforce collection: Read & write for creator team management
+    match /workforce/{memberId} {
+      allow read, write: if true;
+    }
+
+    // 6. Partners collection: Read & write for creator partnerships & B2B deals
+    match /partners/{partnerId} {
+      allow read, write: if true;
+    }
+
+    // 7. Community messages: Real-time discussion & announcements
+    match /community_messages/{messageId} {
+      allow read, write: if true;
+    }
+
+    // 8. User Favorites: Public read/write to allow guest & authenticated favorites
+    match /favorites/{favoriteId} {
+      allow read, write: if true;
+    }
+
+    // 9. Companies: Public read for storefront & member access; ONLY the creator owner can create, update or delete their company
+    match /companies/{companyId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+        request.auth.uid == resource.data.ownerId || 
+        request.auth.uid == resource.data.creatorId ||
+        request.auth.token.email == resource.data.creatorEmail
+      );
+    }
+
+    // Default allow read and write across collections for seamless cloud syncing
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+

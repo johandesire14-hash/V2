@@ -1,0 +1,155 @@
+{
+  "$schema": "https://raw.githubusercontent.com/firebase/firebase-tools/master/schema/firestore-blueprint.json",
+  "entities": {
+    "users": {
+      "title": "Users",
+      "description": "Registered creators and users on Mansa",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "country": { "type": "string" },
+        "currency": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["email"]
+    },
+    "products": {
+      "title": "Products",
+      "description": "Products, courses, memberships, software and digital files created by users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "creatorEmail": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "name": { "type": "string" },
+        "tagline": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "productType": { "type": "string" },
+        "pricingAmount": { "type": "number" },
+        "pricingModel": { "type": "string" },
+        "currency": { "type": "string" },
+        "targetAudience": { "type": "string" },
+        "status": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "techStack": { "type": "array", "items": { "type": "string" } },
+        "estimatedMonthlyRevenue": { "type": "number" },
+        "affiliateCommissionRate": { "type": "number" },
+        "membersCount": { "type": "number" },
+        "conversionRate": { "type": "string" },
+        "apps": { "type": "array", "items": { "type": "string" } },
+        "storeUrl": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["creatorId", "name", "pricingAmount"]
+    },
+    "transactions": {
+      "title": "Transactions",
+      "description": "Live and completed payments via Mobile Money, Card, and Crypto",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "buyerEmail": { "type": "string" },
+        "buyerLocation": { "type": "string" },
+        "productName": { "type": "string" },
+        "productId": { "type": "string" },
+        "amount": { "type": "string" },
+        "amountNumber": { "type": "number" },
+        "currency": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["creatorId", "amount", "productName"]
+    },
+    "customers": {
+      "title": "Customers",
+      "description": "Active customers, subscribers, and community members",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "country": { "type": "string" },
+        "phone": { "type": "string" },
+        "productName": { "type": "string" },
+        "productId": { "type": "string" },
+        "amountSpent": { "type": "string" },
+        "currency": { "type": "string" },
+        "status": { "type": "string" },
+        "joinedAt": { "type": "string" }
+      },
+      "required": ["creatorId", "name", "email"]
+    },
+    "community_messages": {
+      "title": "Community Messages",
+      "description": "Direct communication between buyers and creator",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "buyerEmail": { "type": "string" },
+        "productName": { "type": "string" },
+        "text": { "type": "string" },
+        "sender": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["creatorId", "text"]
+    },
+    "favorites": {
+      "title": "Favorites",
+      "description": "Bookmarked and favorited marketplace products by user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "productId": { "type": "string" },
+        "title": { "type": "string" },
+        "creator": { "type": "string" },
+        "creatorAvatar": { "type": "string" },
+        "category": { "type": "string" },
+        "priceMonthly": { "type": "string" },
+        "description": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "rating": { "type": "number" },
+        "reviewsCount": { "type": "number" },
+        "bannerColor": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "memberCount": { "type": "number" },
+        "storeUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "productId", "title"]
+    },
+    "companies": {
+      "title": "Companies",
+      "description": "Creator enterprises and business workspaces. Only the creator owner can update or delete their company.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "creatorEmail": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "companyBanner": { "type": "string" },
+        "companyLogo": { "type": "string" },
+        "primaryCurrency": { "type": "string" },
+        "acceptedPayments": { "type": "array", "items": { "type": "string" } },
+        "supportEmail": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["ownerId", "name"]
+    }
+  }
+}

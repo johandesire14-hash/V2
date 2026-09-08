@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --mansa-green: #3DDC84;
+    --mansa-green-hover: #2FB86A;
+    --mansa-green-active: #239854;
+    --mansa-bg: #000000;
+    --mansa-charcoal: #151515;
+    --mansa-dust: #B6B5B0;
+    --mansa-offwhite: #F1F1F1;
+    --mansa-border: rgba(255, 255, 255, 0.09);
+
+  }
+
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #000000;
+    color: #F1F1F1;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-heading, .title-grotesk {
+    font-family: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, sans-serif;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+  }
+}
+
+.font-hanken {
+  font-family: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.font-inter {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Mansa Signature High-Contrast Action Button - Clean, sharp & modern */
+.mansa-btn-green,
+.mansa-btn-orange,
+.mansa-btn-blue {
+  background-color: #3DDC84;
+  color: #000000;
+  font-weight: 700;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mansa-btn-green:hover,
+.mansa-btn-orange:hover,
+.mansa-btn-blue:hover {
+  background-color: #2FB86A;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+}
+
+.mansa-btn-green:active,
+.mansa-btn-orange:active,
+.mansa-btn-blue:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Secondary Dark Surface Button */
+.mansa-btn-dark {
+  background-color: #151515;
+  color: #F1F1F1;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mansa-btn-dark:hover {
+  background-color: #1e1f25;
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.4);
+}
+
+.mansa-btn-dark:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Custom dark scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
