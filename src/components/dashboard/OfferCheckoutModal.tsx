@@ -28,6 +28,7 @@ import {
 import { MobileMoneyPaymentForm } from "../payment/MobileMoneyPaymentForm";
 import { PhoneValidationResult } from "../../utils/phoneValidationRules";
 import { useModalDismiss } from "../../hooks/useModalDismiss";
+import { createRealTransaction } from "../../services/dbService";
 
 export type { CreatorPlatformOffer };
 
@@ -200,6 +201,25 @@ export const OfferCheckoutModal: React.FC<OfferCheckoutModalProps> = ({
       setCreatedSubscription(newSub);
       setIsProcessing(false);
       setIsCompleted(true);
+
+      // Enregistrement systématique de la vente rattachée au compte financier du créateur
+      if (offer.pricingType !== "free" && currentPlan.price > 0) {
+        const creatorKey = offer.companyId || user?.uid || user?.email || "creator-default";
+        createRealTransaction(creatorKey, {
+          buyerName: customerName,
+          buyerEmail: customerEmail,
+          buyerLocation: mobileMoneyValidation?.countryName || "Afrique de l'Ouest",
+          productName: offer.title,
+          productId: offer.id,
+          amount: `${currentPlan.price.toLocaleString("fr-FR")} ${offer.currency || "XAF"}`,
+          amountNumber: currentPlan.price,
+          currency: offer.currency || "XAF",
+          paymentMethod:
+            paymentMethod === "mobile_money"
+              ? `${mobileMoneyValidation?.operatorName || "Mobile Money"} (${mobileMoneyValidation?.dialCode || ""})`
+              : "Carte Bancaire (Stripe/Visa)",
+        }).catch((err) => console.warn("Could not log sale transaction:", err));
+      }
     }, 1200);
   };
 

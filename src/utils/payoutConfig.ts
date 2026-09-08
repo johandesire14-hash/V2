@@ -1,5 +1,16 @@
-// Utility to verify and manage creator payment configuration
-// Rule: A product cannot be visible if the creator has not configured their payment method to collect payments.
+/**
+ * GESTION DU MOYEN DE RETRAIT CRÉATEUR
+ * 
+ * RÈGLE FONDAMENTALE DU SYSTÈME FINANCIER :
+ * 1. La configuration d'un moyen de retrait n'est PAS obligatoire pour publier ou vendre.
+ * 2. Un créateur peut créer des offres, les rendre publiques et encaisser des ventes
+ *    même s'il n'a pas encore renseigné de compte bancaire, Mobile Money ou wallet.
+ * 3. Les montants nets de chaque vente sont automatiquement crédités à son solde.
+ * 4. La configuration du retrait est requise UNIQUEMENT lorsque le créateur souhaite
+ *    demander le versement (retrait) de ses fonds disponibles.
+ */
+
+import { isWithdrawalConfigured } from "./creatorFinancialEngine";
 
 export interface PayoutSettings {
   payoutMethod?: "wave" | "orange_momo" | "bank_uemoa" | "bank_cemac" | "crypto" | string;
@@ -13,8 +24,11 @@ export interface PayoutSettings {
 const LOCAL_PAYOUT_CONFIGURED_KEY = "mansa_creator_payout_configured";
 
 export function isCreatorPayoutConfigured(profile?: PayoutSettings | null): boolean {
-  // Check local override if set by user in session
   if (typeof window !== "undefined") {
+    // Check direct withdrawal engine
+    const withdrawalReady = isWithdrawalConfigured(profile?.momoName || "default");
+    if (withdrawalReady) return true;
+
     const localFlag = localStorage.getItem(LOCAL_PAYOUT_CONFIGURED_KEY);
     if (localFlag === "true") return true;
     if (localFlag === "false") return false;

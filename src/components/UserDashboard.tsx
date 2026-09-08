@@ -17,6 +17,7 @@ import {
   Plus,
   User,
   ArrowRight,
+  ArrowUpRight,
   TrendingUp,
   CreditCard,
   DollarSign,
@@ -2362,31 +2363,31 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
 
               </div>
 
-              {/* PAYOUT CONFIGURATION ALERT BANNER: un produit ne peut pas être visible si le créateur n'a pas configuré le mode de paiement */}
+              {/* INFORMATION RETRAIT & VENTES: Un créateur peut publier et vendre sans moyen de retrait. Les fonds restent sur son solde */}
               {!payoutConfigured && (
-                <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-950/40 via-[#181308] to-[#0c0d0e] p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg mb-4">
+                <div className="rounded-2xl border border-sky-500/30 bg-gradient-to-r from-sky-950/30 via-[#0a121a] to-[#0c0d0e] p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg mb-4">
                   <div className="flex items-start gap-3.5">
-                    <div className="size-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                      <AlertTriangle className="size-5" />
+                    <div className="size-10 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                      <CreditCard className="size-5" />
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
-                        <span>Mode d'encaissement non configuré</span>
-                        <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
-                          Produits Masqués au Public
+                        <span>Ventes & Produits actifs · Retrait non configuré</span>
+                        <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                          Ventes 100% Débloquées
                         </span>
                       </h4>
                       <p className="text-xs text-zinc-300 mt-1 max-w-2xl leading-relaxed">
-                        Un produit ne peut pas être visible tant que vous n'avez pas configuré votre mode de paiement afin d'encaisser les fonds (Wave, Orange Money, MTN MoMo ou RIB Bancaire). Vos {productsList.length} produit{productsList.length > 1 ? "s restent masqués" : " reste masqué"} et ne peu{productsList.length > 1 ? "vent" : "t"} pas être acheté{productsList.length > 1 ? "s" : ""}.
+                        Vos {productsList.length} produit{productsList.length > 1 ? "s sont" : " est"} en vente et peu{productsList.length > 1 ? "vent" : "t"} être acheté{productsList.length > 1 ? "s" : ""} par vos clients. L'argent net de vos ventes est crédité en toute sécurité sur votre solde créateur. Renseignez votre moyen de retrait (Wave, Orange Money, MTN MoMo, RIB ou Crypto) quand vous souhaitez demander vos versements.
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => setActiveNav("paiements")}
-                    className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all shrink-0 flex items-center gap-2 shadow-md cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-black text-xs font-bold transition-all shrink-0 flex items-center gap-2 shadow-md cursor-pointer"
                   >
-                    <CreditCard className="size-4" />
-                    <span>Configurer l'encaissement</span>
+                    <ArrowUpRight className="size-4" />
+                    <span>Configurer le retrait</span>
                   </button>
                 </div>
               )}
@@ -2546,38 +2547,20 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                             })()}
                           </td>
 
-                          {/* Visibilité: un produit ne peut pas être visible si le créateur n'a pas configuré le mode de paiement */}
+                          {/* Visibilité: Un créateur vend et publie librement même sans moyen de retrait configuré */}
                           <td className="py-4 px-4 whitespace-nowrap">
-                            {payoutConfigured ? (
-                              <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400">
-                                <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                                <span>{product.visibility || "Visible"}</span>
-                              </span>
-                            ) : (
-                              <div className="inline-flex flex-col gap-0.5">
-                                <span
-                                  title="Ce produit est masqué car votre mode d'encaissement (Wave, Orange Money, RIB) n'est pas configuré."
-                                  className="inline-flex items-center gap-1.5 rounded-md bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[11px] font-semibold text-amber-400"
-                                >
-                                  <span className="size-1.5 rounded-full bg-amber-400"></span>
-                                  <span>Masqué (Paiement requis)</span>
-                                </span>
-                                <button
-                                  onClick={() => setActiveNav("paiements")}
-                                  className="text-[10px] text-amber-300 hover:underline text-left cursor-pointer"
-                                >
-                                  Configurer encaissement →
-                                </button>
-                              </div>
-                            )}
+                            <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400">
+                              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                              <span>{product.visibility || "Actif & En vente"}</span>
+                            </span>
                           </td>
 
                           {/* Statut de la découverte */}
                           <td className="py-4 px-4 text-zinc-400 whitespace-nowrap">
                             <div className="flex items-center gap-1.5">
-                              <Globe className={`size-3.5 ${payoutConfigured ? "text-zinc-500" : "text-amber-500/50"} shrink-0`} />
-                              <span className={payoutConfigured ? "" : "text-zinc-500 line-through"}>
-                                {payoutConfigured ? product.discoverStatus : "Masqué"}
+                              <Globe className="size-3.5 text-zinc-400 shrink-0" />
+                              <span className="text-zinc-300">
+                                {product.discoverStatus || "Public"}
                               </span>
                             </div>
                           </td>

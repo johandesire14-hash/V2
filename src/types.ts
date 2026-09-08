@@ -293,3 +293,76 @@ export interface EnterpriseSubscription {
   reviewsCount?: number;
   subscribersCount?: string;
 }
+
+// ==========================================
+// 💰 CRÉATEUR SYSTÈME FINANCIER & RETRAITS
+// ==========================================
+
+export type PayoutMethodType =
+  | "wave"
+  | "orange_money"
+  | "mtn_momo"
+  | "moov_money"
+  | "bank_uemoa"
+  | "bank_cemac"
+  | "bank_sepa"
+  | "crypto_usdt"
+  | "paypal";
+
+export interface PayoutMethodConfig {
+  id: string;
+  type: PayoutMethodType;
+  label: string;
+  accountHolder: string;
+  accountIdentifier: string; // Ex: Numéro de téléphone, IBAN ou adresse wallet
+  bankName?: string;
+  swiftCode?: string;
+  network?: string; // Ex: "TRC-20", "ERC-20"
+  country?: string;
+  isVerified: boolean;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+export type WithdrawalStatus = "pending" | "processing" | "completed" | "rejected";
+
+export interface WithdrawalRequest {
+  id: string;
+  creatorId: string;
+  amount: number;
+  currency: string;
+  fee: number;
+  netAmount: number;
+  payoutMethodId: string;
+  payoutMethodType: PayoutMethodType;
+  payoutMethodLabel: string;
+  destinationDetails: string;
+  accountHolder: string;
+  status: WithdrawalStatus;
+  requestedAt: string;
+  processedAt?: string;
+  referenceNumber: string;
+  rejectionReason?: string;
+}
+
+export interface CreatorFinancialBalance {
+  totalGrossVolume: number;
+  totalPlatformFees: number;
+  totalNetRevenue: number;
+  pendingBalance: number; // Montants en attente (période de compensation 48h)
+  availableBalance: number; // Montants disponibles au retrait immédiat
+  reserveBalance: number; // Montants temporairement en réserve (ex: 5% rolling reserve)
+  totalWithdrawn: number; // Total des retraits déjà versés
+  currency: string;
+}
+
+export type KycVerificationStatus = "not_required" | "pending" | "verified" | "rejected";
+
+export interface KycVerificationInfo {
+  status: KycVerificationStatus;
+  documentType?: "cni" | "passport" | "business_reg";
+  documentNumber?: string;
+  submittedAt?: string;
+  verifiedAt?: string;
+  notes?: string;
+}

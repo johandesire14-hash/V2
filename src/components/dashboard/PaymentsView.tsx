@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   CreditCard,
   ArrowDownLeft,
@@ -21,18 +21,48 @@ import {
   Smartphone,
   Plus,
   Check,
+  Wallet,
+  Lock,
+  RefreshCw,
+  AlertTriangle,
+  Send,
+  Trash2,
+  Eye,
+  ArrowRight,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { ModalOverlay } from "../common/ModalOverlay";
 import {
   subscribeToCreatorTransactions,
   createRealTransaction,
-  seedRealisticDemoData,
   FirestoreTransaction,
 } from "../../services/dbService";
 import { CurrencyCode, formatCurrency } from "../../utils/currency";
 import { isCreatorPayoutConfigured, setCreatorPayoutConfigured } from "../../utils/payoutConfig";
 import { MobileMoneyTesterModal } from "../payment/MobileMoneyTesterModal";
+import {
+  PayoutMethodConfig,
+  PayoutMethodType,
+  WithdrawalRequest,
+  KycVerificationInfo,
+} from "../../types";
+import {
+  calculateCreatorFinancialBalance,
+  getSavedPayoutMethods,
+  savePayoutMethod,
+  removePayoutMethod,
+  setDefaultPayoutMethod,
+  getWithdrawalHistory,
+  createWithdrawalRequest,
+  isWithdrawalConfigured,
+  verifyWithdrawalEligibility,
+  forceClearAllPendingFunds,
+  getCreatorKycStatus,
+  saveCreatorKycStatus,
+  FINANCIAL_EVENTS,
+  MIN_WITHDRAWAL_AMOUNT_XOF,
+  MIN_WITHDRAWAL_AMOUNT_EUR,
+} from "../../utils/creatorFinancialEngine";
 
 interface PaymentTransaction {
   id: string;
@@ -40,8 +70,10 @@ interface PaymentTransaction {
   customerEmail: string;
   productName: string;
   amountGrossFormatted: string;
+  amountGrossNumber: number;
   feeAmountFormatted: string;
   amountNetFormatted: string;
+  amountNetNumber: number;
   currency: string;
   paymentMethod: "wave" | "orange_money" | "mtn_momo" | "moov_money" | "visa_mastercard" | "bank_uemoa";
   paymentMethodLabel: string;
@@ -50,6 +82,7 @@ interface PaymentTransaction {
   status: "succeeded" | "pending" | "refunded" | "disputed";
   date: string;
   time: string;
+  rawTx: FirestoreTransaction;
 }
 
 interface PaymentsViewProps {
@@ -57,110 +90,174 @@ interface PaymentsViewProps {
   currency?: CurrencyCode;
 }
 
-export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currency = "XAF" as CurrencyCode }) => {
+type FinancialTab = "overview" | "sales" | "withdrawals" | "payout_methods";
+
+export const PaymentsView: React.FC<PaymentsViewProps> = ({
+  lang = "fr",
+  currency = "XAF" as CurrencyCode,
+}) => {
   const activeCurrency: CurrencyCode = (currency as CurrencyCode) || "XAF";
   const { user, profile } = useAuth();
+  const creatorKey = profile?.uid || user?.email || "creator-default";
+
+  // Navigation tab
+  const [activeTab, setActiveTab] = useState<FinancialTab>("overview");
+
+  // Transactions & Raw Data
+  const [rawTransactions, setRawTransactions] = useState<FirestoreTransaction[]>([]);
+  const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
+
+  // Withdrawals & Payout Methods
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [payoutMethods, setPayoutMethods] = useState<PayoutMethodConfig[]>([]);
+  const [kycInfo, setKycInfo] = useState<KycVerificationInfo>({ status: "not_required" });
+
+  // Modals & Drawers
   const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false);
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
   const [isTesterModalOpen, setIsTesterModalOpen] = useState(false);
+  const [isAddMethodModalOpen, setIsAddMethodModalOpen] = useState(false);
   const [selectedTx, setSelectedTx] = useState<PaymentTransaction | null>(null);
-  const [payoutAmount, setPayoutAmount] = useState("450000");
-  const [payoutMethod, setPayoutMethod] = useState("wave_ci");
-  const [payoutSuccess, setPayoutSuccess] = useState(false);
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalRequest | null>(null);
 
-  // Payout Configuration state (Rule: un produit ne peut pas être visible si le créateur n'a pas configuré son mode de paiement)
-  const [isPayoutConfiguredState, setIsPayoutConfiguredState] = useState<boolean>(() =>
-    isCreatorPayoutConfigured(profile)
-  );
-  const [isConfigDrawerOpen, setIsConfigDrawerOpen] = useState(false);
-  const [cfgMethod, setCfgMethod] = useState<string>(profile?.payoutMethod || "wave");
-  const [cfgMomoNumber, setCfgMomoNumber] = useState<string>(profile?.momoNumber || "+225 07 88 99 00 11");
-  const [cfgAccountHolder, setCfgAccountHolder] = useState<string>(
-    profile?.momoName || profile?.bankAccountHolder || user?.displayName || "Johan Désiré"
-  );
-  const [cfgBankRib, setCfgBankRib] = useState<string>(
-    profile?.bankIbanRib || "CI093 01234 56789012345 67"
-  );
-  const [cfgFeedback, setCfgFeedback] = useState<string | null>(null);
+  // Withdrawal form inside modal
+  const [withdrawalAmount, setWithdrawalAmount] = useState<string>("");
+  const [selectedMethodId, setSelectedMethodId] = useState<string>("");
+  const [withdrawalError, setWithdrawalError] = useState<string | null>(null);
+  const [withdrawalSuccess, setWithdrawalSuccess] = useState<WithdrawalRequest | null>(null);
+  const [isSubmittingWithdrawal, setIsSubmittingWithdrawal] = useState(false);
 
-  useEffect(() => {
-    setIsPayoutConfiguredState(isCreatorPayoutConfigured(profile));
-  }, [profile]);
+  // New Payout Method Form
+  const [newMethodType, setNewMethodType] = useState<PayoutMethodType>("wave");
+  const [newMethodLabel, setNewMethodLabel] = useState("Wave Côte d'Ivoire");
+  const [newMethodHolder, setNewMethodHolder] = useState(profile?.momoName || user?.displayName || "Johan Désiré");
+  const [newMethodIdentifier, setNewMethodIdentifier] = useState("+225 07 88 99 00 11");
+  const [newMethodBank, setNewMethodBank] = useState("");
+  const [newMethodCountry, setNewMethodCountry] = useState("Côte d'Ivoire");
 
-  const handleSavePayoutConfig = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreatorPayoutConfigured(true);
-    setIsPayoutConfiguredState(true);
-    setCfgFeedback(
-      lang === "fr"
-        ? "✅ Mode d'encaissement enregistré avec succès ! Vos produits sont désormais visibles."
-        : "✅ Payout configuration saved successfully! Your products are now visible."
-    );
-    setTimeout(() => {
-      setCfgFeedback(null);
-      setIsConfigDrawerOpen(false);
-    }, 2500);
-  };
+  // Feedback notifications
+  const [notification, setNotification] = useState<{ type: "success" | "info" | "error"; text: string } | null>(null);
 
-  const handleTogglePayoutTesting = () => {
-    const nextState = !isPayoutConfiguredState;
-    setCreatorPayoutConfigured(nextState);
-    setIsPayoutConfiguredState(nextState);
-    setCfgFeedback(
-      nextState
-        ? "✅ Mode encaissement ACTIVÉ : Vos produits sont visibles sur le Marketplace."
-        : "⚠️ Mode encaissement DÉSACTIVÉ : Vos produits sont masqués (invisibles au public)."
-    );
-    setTimeout(() => setCfgFeedback(null), 3000);
-  };
-
-  // New Sale Form state
-  const [saleProductName, setSaleProductName] = useState("Pass VIP Communauté Mansa");
+  // Manual Sale State
+  const [saleProductName, setSaleProductName] = useState("Offre Pro Mansa Trading VIP");
   const [saleCustomerName, setSaleCustomerName] = useState("");
   const [saleCustomerEmail, setSaleCustomerEmail] = useState("");
-  const [saleAmount, setSaleAmount] = useState("25000");
+  const [saleAmount, setSaleAmount] = useState("35000");
   const [saleCurrency, setSaleCurrency] = useState("XOF");
   const [salePaymentMethod, setSalePaymentMethod] = useState("Wave CI");
   const [saleLocation, setSaleLocation] = useState("Abidjan, Côte d'Ivoire");
 
+  // Load Payout Methods & Withdrawals
+  const reloadFinancialData = () => {
+    const methods = getSavedPayoutMethods(creatorKey);
+    setPayoutMethods(methods);
+    const wdrs = getWithdrawalHistory(creatorKey);
+    setWithdrawals(wdrs);
+    const kyc = getCreatorKycStatus(creatorKey);
+    setKycInfo(kyc);
+  };
+
   useEffect(() => {
-    const creatorKey = profile?.uid || user?.email || "creator-default";
+    reloadFinancialData();
+
+    const handleDataChange = () => {
+      reloadFinancialData();
+    };
+
+    window.addEventListener(FINANCIAL_EVENTS.PAYOUT_METHOD_CHANGED, handleDataChange);
+    window.addEventListener(FINANCIAL_EVENTS.WITHDRAWAL_CREATED, handleDataChange);
+    window.addEventListener(FINANCIAL_EVENTS.BALANCE_CHANGED, handleDataChange);
+    window.addEventListener(FINANCIAL_EVENTS.KYC_CHANGED, handleDataChange);
+
+    return () => {
+      window.removeEventListener(FINANCIAL_EVENTS.PAYOUT_METHOD_CHANGED, handleDataChange);
+      window.removeEventListener(FINANCIAL_EVENTS.WITHDRAWAL_CREATED, handleDataChange);
+      window.removeEventListener(FINANCIAL_EVENTS.BALANCE_CHANGED, handleDataChange);
+      window.removeEventListener(FINANCIAL_EVENTS.KYC_CHANGED, handleDataChange);
+    };
+  }, [creatorKey]);
+
+  // Subscribe to real transactions
+  useEffect(() => {
     const unsub = subscribeToCreatorTransactions(creatorKey, (dbTxs) => {
-      const mapped: PaymentTransaction[] = dbTxs.map((t) => ({
-        id: t.id,
-        customerName: t.buyerName || t.customerName || "Client Mansa",
-        customerEmail: t.buyerEmail || t.customerEmail || "client@gmail.com",
-        productName: t.productName,
-        amountGrossFormatted: t.amount,
-        feeAmountFormatted: `${Math.round((t.amountNumber || 0) * 0.03)} ${t.currency}`,
-        amountNetFormatted: `${Math.round((t.amountNumber || 0) * 0.97)} ${t.currency}`,
-        currency: t.currency,
-        paymentMethod: (t.paymentMethod?.toLowerCase().includes("wave") ? "wave" :
-                       t.paymentMethod?.toLowerCase().includes("orange") ? "orange_money" :
-                       t.paymentMethod?.toLowerCase().includes("mtn") ? "mtn_momo" :
-                       t.paymentMethod?.toLowerCase().includes("moov") ? "moov_money" : "visa_mastercard") as any,
-        paymentMethodLabel: t.paymentMethod || "Mobile Money",
-        countryFlag: t.buyerLocation?.includes("Sénégal") ? "🇸🇳" :
-                     t.buyerLocation?.includes("Nigéria") ? "🇳🇬" :
-                     t.buyerLocation?.includes("Cameroun") ? "🇨🇲" :
-                     t.buyerLocation?.includes("Ghana") ? "🇬🇭" : "🇨🇮",
-        countryName: t.buyerLocation || "Afrique de l'Ouest",
-        status: t.status as any,
-        date: new Date().toLocaleDateString("fr-FR"),
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      }));
+      setRawTransactions(dbTxs);
+      const mapped: PaymentTransaction[] = dbTxs.map((t) => {
+        const gross = t.amountNumber || 0;
+        const fee = Math.round(gross * 0.03);
+        const net = Math.max(0, gross - fee);
+
+        return {
+          id: t.id,
+          customerName: t.buyerName || t.customerName || "Client Acheteur",
+          customerEmail: t.buyerEmail || t.customerEmail || "client@afhub.app",
+          productName: t.productName,
+          amountGrossFormatted: t.amount,
+          amountGrossNumber: gross,
+          feeAmountFormatted: `${fee.toLocaleString("fr-FR")} ${t.currency}`,
+          amountNetFormatted: `${net.toLocaleString("fr-FR")} ${t.currency}`,
+          amountNetNumber: net,
+          currency: t.currency,
+          paymentMethod: (t.paymentMethod?.toLowerCase().includes("wave")
+            ? "wave"
+            : t.paymentMethod?.toLowerCase().includes("orange")
+            ? "orange_money"
+            : t.paymentMethod?.toLowerCase().includes("mtn")
+            ? "mtn_momo"
+            : t.paymentMethod?.toLowerCase().includes("moov")
+            ? "moov_money"
+            : "visa_mastercard") as any,
+          paymentMethodLabel: t.paymentMethod || "Mobile Money",
+          countryFlag: t.buyerLocation?.includes("Sénégal")
+            ? "🇸🇳"
+            : t.buyerLocation?.includes("Nigéria")
+            ? "🇳🇬"
+            : t.buyerLocation?.includes("Cameroun")
+            ? "🇨🇲"
+            : t.buyerLocation?.includes("Ghana")
+            ? "🇬🇭"
+            : "🇨🇮",
+          countryName: t.buyerLocation || "Côte d'Ivoire",
+          status: (t.status as any) || "succeeded",
+          date: t.createdAt
+            ? new Date(t.createdAt).toLocaleDateString("fr-FR")
+            : new Date().toLocaleDateString("fr-FR"),
+          time: t.createdAt
+            ? new Date(t.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          rawTx: t,
+        };
+      });
       setTransactions(mapped);
     });
 
     return () => unsub();
-  }, [profile?.uid, user?.email]);
+  }, [creatorKey]);
 
+  // Compute Balances
+  const balance = useMemo(() => {
+    return calculateCreatorFinancialBalance(creatorKey, rawTransactions, activeCurrency);
+  }, [creatorKey, rawTransactions, withdrawals, activeCurrency]);
+
+  const hasWithdrawalConfigured = payoutMethods.length > 0;
+
+  // Filtered Transactions
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((tx) => {
+      const matchesFilter = filterStatus === "all" || tx.status === filterStatus;
+      const matchesSearch =
+        tx.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tx.customerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tx.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tx.productName.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
+  }, [transactions, filterStatus, searchQuery]);
+
+  // Handle Manual Sale Creation
   const handleCreateSale = async (e: React.FormEvent) => {
     e.preventDefault();
-    const creatorKey = profile?.uid || user?.email || "creator-default";
     const amtNum = parseFloat(saleAmount) || 25000;
     await createRealTransaction(creatorKey, {
       productName: saleProductName,
@@ -168,64 +265,164 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
       amount: `${amtNum.toLocaleString("fr-FR")} ${saleCurrency}`,
       amountNumber: amtNum,
       currency: saleCurrency,
-      buyerName: saleCustomerName || "Client Mansa",
-      buyerEmail: saleCustomerEmail || "client@gmail.com",
+      buyerName: saleCustomerName || "Client Acheteur Mansa",
+      buyerEmail: saleCustomerEmail || "client@afhub.app",
       buyerLocation: saleLocation,
       paymentMethod: salePaymentMethod,
     });
     setIsNewSaleModalOpen(false);
     setSaleCustomerName("");
     setSaleCustomerEmail("");
+    showFeedback("success", "Nouvelle vente enregistrée et créditée à votre solde créateur !");
   };
 
-  const filteredTransactions = transactions.filter((tx) => {
-    const matchesFilter = filterStatus === "all" || tx.status === filterStatus;
-    const matchesSearch =
-      tx.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tx.customerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tx.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tx.productName.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
-
-  const handleRequestPayout = (e: React.FormEvent) => {
+  // Handle Withdrawal Request Submission
+  const handleSubmitWithdrawal = (e: React.FormEvent) => {
     e.preventDefault();
-    setPayoutSuccess(true);
+    setWithdrawalError(null);
+
+    const amountNum = parseFloat(withdrawalAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      setWithdrawalError("Veuillez saisir un montant de virement valide.");
+      return;
+    }
+
+    const targetMethodId = selectedMethodId || payoutMethods[0]?.id;
+    if (!targetMethodId) {
+      setWithdrawalError("Veuillez sélectionner ou configurer un compte de retrait.");
+      return;
+    }
+
+    if (amountNum > balance.availableBalance) {
+      setWithdrawalError(
+        `Le montant demandé dépasse votre solde disponible (${formatCurrency(balance.availableBalance, activeCurrency)}).`
+      );
+      return;
+    }
+
+    const minAmount = activeCurrency === "EUR" ? MIN_WITHDRAWAL_AMOUNT_EUR : MIN_WITHDRAWAL_AMOUNT_XOF;
+    if (amountNum < minAmount) {
+      setWithdrawalError(
+        `Le montant minimum de retrait est de ${formatCurrency(minAmount, activeCurrency)}.`
+      );
+      return;
+    }
+
+    setIsSubmittingWithdrawal(true);
     setTimeout(() => {
-      setPayoutSuccess(false);
-      setIsPayoutModalOpen(false);
-    }, 2000);
+      const result = createWithdrawalRequest({
+        creatorId: creatorKey,
+        amount: amountNum,
+        currency: activeCurrency,
+        payoutMethodId: targetMethodId,
+      });
+
+      setIsSubmittingWithdrawal(false);
+      if (result.success && result.request) {
+        setWithdrawalSuccess(result.request);
+        reloadFinancialData();
+        showFeedback(
+          "success",
+          `Demande de virement de ${formatCurrency(amountNum, activeCurrency)} transmise avec succès !`
+        );
+      } else {
+        setWithdrawalError(result.error || "Échec de l'envoi de la demande de virement.");
+      }
+    }, 900);
   };
 
-  // Calculate real metric totals directly from real Firestore transactions (0 if empty)
-  const totalGrossVolume = transactions.reduce((acc, tx) => {
-    const amt = tx.amountGross || 0;
-    return acc + amt;
-  }, 0);
-  const totalFees = transactions.reduce((acc, tx) => {
-    const fee = tx.feeAmount || 0;
-    return acc + fee;
-  }, 0);
-  const availableBalance = Math.max(0, totalGrossVolume - totalFees);
-  const successfulCount = transactions.filter((t) => t.status === "completed" || !t.status).length;
+  // Handle Save New Payout Method
+  const handleSaveNewMethod = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newConfig: PayoutMethodConfig = {
+      id: `pm-${Date.now()}`,
+      type: newMethodType,
+      label: newMethodLabel,
+      accountHolder: newMethodHolder,
+      accountIdentifier: newMethodIdentifier,
+      bankName: newMethodBank,
+      country: newMethodCountry,
+      isVerified: true,
+      isDefault: payoutMethods.length === 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    savePayoutMethod(creatorKey, newConfig);
+    setCreatorPayoutConfigured(true);
+    setIsAddMethodModalOpen(false);
+    showFeedback("success", "Moyen de retrait configuré avec succès ! Vos retraits sont débloqués.");
+  };
+
+  // Fast forward clearance (testing / demonstration)
+  const handleClearAllPending = () => {
+    const pendingIds = transactions.map((t) => t.id);
+    forceClearAllPendingFunds(creatorKey, pendingIds);
+    showFeedback(
+      "info",
+      "Période de compensation terminée : l'ensemble des fonds en attente est désormais disponible pour retrait !"
+    );
+  };
+
+  const showFeedback = (type: "success" | "info" | "error", text: string) => {
+    setNotification({ type, text });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  // Open withdrawal dialog with checks
+  const handleOpenWithdrawalDialog = () => {
+    setWithdrawalError(null);
+    setWithdrawalSuccess(null);
+    if (payoutMethods.length > 0) {
+      const defaultM = payoutMethods.find((m) => m.isDefault) || payoutMethods[0];
+      setSelectedMethodId(defaultM.id);
+    }
+    setWithdrawalAmount(balance.availableBalance > 0 ? balance.availableBalance.toString() : "50000");
+    setIsPayoutModalOpen(true);
+  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Toast feedback */}
+      {notification && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium animate-slide-up ${
+            notification.type === "success"
+              ? "bg-emerald-950/90 border-emerald-500/40 text-emerald-200"
+              : notification.type === "error"
+              ? "bg-rose-950/90 border-rose-500/40 text-rose-200"
+              : "bg-sky-950/90 border-sky-500/40 text-sky-200"
+          }`}
+        >
+          {notification.type === "success" ? (
+            <CheckCircle2 className="size-5 text-emerald-400 shrink-0" />
+          ) : notification.type === "error" ? (
+            <AlertCircle className="size-5 text-rose-400 shrink-0" />
+          ) : (
+            <Zap className="size-5 text-sky-400 shrink-0" />
+          )}
+          <span>{notification.text}</span>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            {lang === "fr" ? "Paiement" : "Payments"}
-          </h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            {lang === "fr"
-              ? "Gérez vos encaissements Wave, Orange Money, MTN MoMo, cartes bancaires et demandez des virements bancaires instantanés."
-              : "Manage African mobile money volume, card checkout transactions and instant bank payouts."}
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Centre Financier & Encaissements
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              Ventes Débloquées
+            </span>
+          </div>
+          <p className="text-xs text-zinc-400 mt-1 max-w-2xl leading-relaxed">
+            Consultez votre solde en temps réel, suivez vos encaissements Mobile Money & Cartes, et
+            demandez vos virements de fonds vers votre compte bancaire ou wallet.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => {
               const csvContent =
@@ -241,7 +438,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
               const encodedUri = encodeURI(csvContent);
               const link = document.createElement("a");
               link.setAttribute("href", encodedUri);
-              link.setAttribute("download", "mansa_transactions.csv");
+              link.setAttribute("download", `mansa_ventes_${Date.now()}.csv`);
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
@@ -249,13 +446,13 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 bg-[#151515] text-xs font-semibold text-[#B6B5B0] hover:text-white hover:border-white/20 transition-all cursor-pointer"
           >
             <Download className="size-3.5" />
-            <span>{lang === "fr" ? "Exporter CSV" : "Export CSV"}</span>
+            <span>Exporter CSV</span>
           </button>
 
           <button
             onClick={() => setIsTesterModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 text-xs font-bold transition-all cursor-pointer border border-amber-500/30"
-            title="Tester la validation des numéros Mobile Money selon les spécifications"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-bold transition-all cursor-pointer border border-amber-500/25"
+            title="Tester les numéros Mobile Money Wave, Orange, MTN, Moov"
           >
             <Smartphone className="size-3.5 text-amber-400" />
             <span>Tester Mobile Money</span>
@@ -263,466 +460,993 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
 
           <button
             onClick={() => setIsNewSaleModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all cursor-pointer border border-white/10"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all cursor-pointer border border-white/10"
           >
-            <Plus className="size-3.5 text-[#3DDC84]" />
-            <span>{lang === "fr" ? "+ Vente manuelle" : "+ Manual Sale"}</span>
+            <Plus className="size-3.5 text-emerald-400" />
+            <span>+ Vente manuelle</span>
           </button>
 
           <button
-            onClick={() => setIsPayoutModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#3DDC84] hover:bg-[#2FB86A] text-black text-xs font-bold transition-all cursor-pointer shadow-md"
+            onClick={handleOpenWithdrawalDialog}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all cursor-pointer shadow-lg shadow-emerald-500/20"
           >
             <ArrowUpRight className="size-4" />
-            <span>{lang === "fr" ? "Demander un Virement" : "Request Payout"}</span>
+            <span>Demander un virement</span>
           </button>
         </div>
       </div>
 
-      {/* PAYOUT CONFIGURATION CARD (Rule: un produit ne peut pas être visible si le créateur n'a pas configuré le mode de paiement) */}
-      <div className={`rounded-2xl border transition-all p-5 ${
-        isPayoutConfiguredState
-          ? "border-emerald-500/30 bg-gradient-to-r from-emerald-950/20 via-[#0c1810] to-[#0c0d0e]"
-          : "border-amber-500/40 bg-gradient-to-r from-amber-950/30 via-[#181308] to-[#0c0d0e]"
-      }`}>
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-              isPayoutConfiguredState
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-            }`}>
-              {isPayoutConfiguredState ? <CheckCircle2 className="size-5" /> : <AlertCircle className="size-5" />}
+      {/* 4 Navigation Subtabs */}
+      <div className="flex items-center gap-1 border-b border-white/[0.08] overflow-x-auto no-scrollbar pb-px">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`flex items-center gap-2 px-4 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === "overview"
+              ? "border-emerald-500 text-white bg-emerald-500/5"
+              : "border-transparent text-zinc-400 hover:text-zinc-200"
+          }`}
+        >
+          <DollarSign className="size-3.5" />
+          <span>Vue d'ensemble & Soldes</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("sales")}
+          className={`flex items-center gap-2 px-4 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === "sales"
+              ? "border-emerald-500 text-white bg-emerald-500/5"
+              : "border-transparent text-zinc-400 hover:text-zinc-200"
+          }`}
+        >
+          <ArrowDownLeft className="size-3.5" />
+          <span>Historique des Ventes ({transactions.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("withdrawals")}
+          className={`flex items-center gap-2 px-4 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === "withdrawals"
+              ? "border-emerald-500 text-white bg-emerald-500/5"
+              : "border-transparent text-zinc-400 hover:text-zinc-200"
+          }`}
+        >
+          <ArrowUpRight className="size-3.5" />
+          <span>Gestion des Retraits ({withdrawals.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("payout_methods")}
+          className={`flex items-center gap-2 px-4 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === "payout_methods"
+              ? "border-emerald-500 text-white bg-emerald-500/5"
+              : "border-transparent text-zinc-400 hover:text-zinc-200"
+          }`}
+        >
+          <CreditCard className="size-3.5" />
+          <span>Moyens de Retrait & KYC</span>
+          {payoutMethods.length === 0 && (
+            <span className="size-2 rounded-full bg-amber-400 animate-ping"></span>
+          )}
+        </button>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* TAB 1: VUE D'ENSEMBLE & SOLDES */}
+      {/* ========================================================================= */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          {/* STATUT DU RETRAIT (RÈGLE DU CAHIER DES CHARGES : VENTES DÉBLOQUÉES, RETRAITS BLOQUÉS SI NON CONFIGURÉ) */}
+          <div
+            className={`rounded-2xl border transition-all p-5 ${
+              hasWithdrawalConfigured
+                ? "border-emerald-500/30 bg-gradient-to-r from-emerald-950/25 via-[#0c1810] to-[#0c0d0e]"
+                : "border-amber-500/35 bg-gradient-to-r from-amber-950/30 via-[#181208] to-[#0c0d0e]"
+            }`}
+          >
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div
+                  className={`size-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                    hasWithdrawalConfigured
+                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                      : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                  }`}
+                >
+                  {hasWithdrawalConfigured ? (
+                    <CheckCircle2 className="size-5" />
+                  ) : (
+                    <AlertTriangle className="size-5" />
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-bold text-white">
+                      {hasWithdrawalConfigured
+                        ? "Moyen de retrait configuré & virements débloqués"
+                        : "Moyen de retrait non configuré · Ventes 100% actives"}
+                    </h3>
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
+                        hasWithdrawalConfigured
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                          : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                      }`}
+                    >
+                      {hasWithdrawalConfigured
+                        ? "Virements Autorisés"
+                        : "Retraits en attente de compte"}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-zinc-300 mt-1 max-w-3xl leading-relaxed">
+                    {hasWithdrawalConfigured ? (
+                      <>
+                        Vos virements sont programmés vers votre compte{" "}
+                        <strong className="text-white">
+                          {payoutMethods.find((m) => m.isDefault)?.label || payoutMethods[0].label}
+                        </strong>{" "}
+                        ({payoutMethods.find((m) => m.isDefault)?.accountIdentifier || payoutMethods[0].accountIdentifier}).
+                        Vous pouvez demander un virement immédiat dès que vous avez des fonds disponibles.
+                      </>
+                    ) : (
+                      <>
+                        Vous pouvez vendre et publier librement. L'argent net de chaque vente est
+                        automatiquement crédité à votre solde Mansa (
+                        <strong className="text-emerald-400 font-mono">
+                          {formatCurrency(balance.availableBalance, activeCurrency)} disponibles
+                        </strong>
+                        ). Le retrait reste conservé sur votre solde tant que vous n'avez pas renseigné
+                        votre compte de retrait (Wave, Orange Money, MTN MoMo, RIB ou Crypto).
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                <button
+                  onClick={() => setActiveTab("payout_methods")}
+                  className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all border border-white/10 cursor-pointer"
+                >
+                  {hasWithdrawalConfigured ? "Gérer mes comptes" : "Configurer mon moyen de retrait"}
+                </button>
+
+                {hasWithdrawalConfigured && (
+                  <button
+                    onClick={handleOpenWithdrawalDialog}
+                    className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all cursor-pointer shadow-md"
+                  >
+                    Retirer mes fonds
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 4 CARTES DE SOLDES FINANCIERS COMPLETS (EXACTEMENT SELON LE CAHIER DES CHARGES) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 1. Solde Total */}
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c0d0e] p-5 space-y-2 relative overflow-hidden group">
+              <div className="flex items-center justify-between text-xs text-zinc-400">
+                <span className="font-semibold">Solde Total Net</span>
+                <Wallet className="size-4 text-emerald-400" />
+              </div>
+              <div className="text-2xl sm:text-3xl font-extrabold font-mono text-white tracking-tight">
+                {formatCurrency(balance.totalNetRevenue - balance.totalWithdrawn, activeCurrency)}
+              </div>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Total accumulé des ventes nettes après déduction des retraits effectués.
+              </p>
             </div>
 
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-bold text-white">
-                  {isPayoutConfiguredState
-                    ? "Compte d'encaissement vérifié & actif"
-                    : "Compte d'encaissement non configuré"}
-                </h3>
-                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
-                  isPayoutConfiguredState
-                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                    : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                }`}>
-                  {isPayoutConfiguredState ? "Produits Visibles" : "Produits Masqués"}
+            {/* 2. Montant Disponible au Retrait */}
+            <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-b from-[#0e1c12] to-[#0c0d0e] p-5 space-y-2 relative overflow-hidden">
+              <div className="flex items-center justify-between text-xs text-emerald-300">
+                <span className="font-bold flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Montant Disponible
+                </span>
+                <ArrowUpRight className="size-4 text-emerald-400" />
+              </div>
+              <div className="text-2xl sm:text-3xl font-extrabold font-mono text-emerald-400 tracking-tight">
+                {formatCurrency(balance.availableBalance, activeCurrency)}
+              </div>
+              <p className="text-[11px] text-emerald-400/80 leading-tight">
+                Fonds débloqués prêts pour un virement immédiat vers votre compte.
+              </p>
+            </div>
+
+            {/* 3. Montants en Attente (Période de compensation 48h) */}
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c0d0e] p-5 space-y-2">
+              <div className="flex items-center justify-between text-xs text-amber-400">
+                <span className="font-semibold flex items-center gap-1.5">
+                  <Clock className="size-3.5 text-amber-400" />
+                  Fonds en Attente (48h)
+                </span>
+                <span className="text-[10px] font-mono bg-amber-500/10 px-1.5 py-0.5 rounded text-amber-300">
+                  Compensation
                 </span>
               </div>
+              <div className="text-2xl sm:text-3xl font-extrabold font-mono text-amber-400 tracking-tight">
+                {formatCurrency(balance.pendingBalance, activeCurrency)}
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <p className="text-[10px] text-zinc-500">Délai de compensation antifraude.</p>
+                {balance.pendingBalance > 0 && (
+                  <button
+                    onClick={handleClearAllPending}
+                    title="Simuler la fin du délai de 48h pour rendre les fonds disponibles"
+                    className="text-[10px] text-amber-300 hover:text-white underline cursor-pointer"
+                  >
+                    Libérer maintenant ⚡
+                  </button>
+                )}
+              </div>
+            </div>
 
-              <p className="text-xs text-zinc-300 mt-1 max-w-2xl leading-relaxed">
-                {isPayoutConfiguredState
-                  ? `Vos fonds sont automatiquement reversés via ${cfgMethod.toUpperCase()} (${cfgMomoNumber || cfgBankRib}). Vos produits sont visibles et peuvent recevoir des paiements.`
-                  : "Un produit ne peut pas être visible si le créateur n'a pas configuré le mode de paiement afin d'encaisser les paiements. Configurez votre compte Wave, Orange Money ou RIB bancaire pour débloquer la visibilité."}
+            {/* 4. Réserves de Garantie Temporaires (5%) */}
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c0d0e] p-5 space-y-2">
+              <div className="flex items-center justify-between text-xs text-zinc-400">
+                <span className="font-semibold flex items-center gap-1.5">
+                  <Lock className="size-3.5 text-zinc-400" />
+                  Réserve de Sécurité (5%)
+                </span>
+                <ShieldCheck className="size-4 text-zinc-500" />
+              </div>
+              <div className="text-2xl sm:text-3xl font-extrabold font-mono text-zinc-300 tracking-tight">
+                {formatCurrency(balance.reserveBalance, activeCurrency)}
+              </div>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Réserve tournante conservée temporairement pour la gestion des litiges.
               </p>
+            </div>
+          </div>
 
-              {cfgFeedback && (
-                <div className="mt-2 text-xs font-semibold text-emerald-400 animate-fade-in">
-                  {cfgFeedback}
+          {/* TOTAL DES RETRAITS VERSÉS & VOLUME BRUT */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c0d0e] p-5 space-y-1">
+              <div className="text-xs text-zinc-400 font-semibold">Volume Brut Encaissé</div>
+              <div className="text-xl sm:text-2xl font-bold font-mono text-white">
+                {formatCurrency(balance.totalGrossVolume, activeCurrency)}
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                Total des ventes brutes générées depuis le lancement.
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c0d0e] p-5 space-y-1">
+              <div className="text-xs text-zinc-400 font-semibold">Frais Plateforme Mansa (3%)</div>
+              <div className="text-xl sm:text-2xl font-bold font-mono text-zinc-300">
+                {formatCurrency(balance.totalPlatformFees, activeCurrency)}
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                Frais d'infrastructure, passerelle de paiement et serveurs.
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c0d0e] p-5 space-y-1">
+              <div className="text-xs text-zinc-400 font-semibold">Total Retraits Déjà Versés</div>
+              <div className="text-xl sm:text-2xl font-bold font-mono text-emerald-400">
+                {formatCurrency(balance.totalWithdrawn, activeCurrency)}
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                Montants reçus sur vos comptes Mobile Money ou bancaires.
+              </div>
+            </div>
+          </div>
+
+          {/* DERNIÈRES VENTES ET DERNIERS RETRAITS (APERÇU RAPIDE) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Aperçu Ventes Récentes */}
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c0d0e] p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                <div className="flex items-center gap-2">
+                  <ArrowDownLeft className="size-4 text-emerald-400" />
+                  <h3 className="text-sm font-bold text-white">Dernières Ventes Encaissées</h3>
                 </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0">
-            <button
-              onClick={() => setIsConfigDrawerOpen(!isConfigDrawerOpen)}
-              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all border border-white/10 cursor-pointer"
-            >
-              {isConfigDrawerOpen ? "Fermer la configuration" : "Modifier mes coordonnées"}
-            </button>
-
-            <button
-              onClick={handleTogglePayoutTesting}
-              title="Tester le basculement entre état configuré et non-configuré"
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                isPayoutConfiguredState
-                  ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border-amber-500/30"
-                  : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-              }`}
-            >
-              {isPayoutConfiguredState ? "Simuler compte non configuré" : "Activer mon encaissement"}
-            </button>
-          </div>
-        </div>
-
-        {/* Expandable Configuration Form */}
-        {isConfigDrawerOpen && (
-          <form onSubmit={handleSavePayoutConfig} className="mt-5 pt-5 border-t border-white/10 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="text-[11px] text-zinc-400 block mb-1">Moyen d'encaissement</label>
-                <select
-                  value={cfgMethod}
-                  onChange={(e) => setCfgMethod(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl bg-[#14161b] border border-white/10 text-xs text-white focus:outline-none focus:border-emerald-500"
+                <button
+                  onClick={() => setActiveTab("sales")}
+                  className="text-xs text-emerald-400 hover:underline cursor-pointer"
                 >
-                  <option value="wave">Wave (Côte d'Ivoire / Sénégal)</option>
-                  <option value="orange_momo">Orange Money</option>
-                  <option value="mtn_momo">MTN Mobile Money</option>
-                  <option value="bank_uemoa">Virement Bancaire UEMOA</option>
-                  <option value="bank_cemac">Virement Bancaire CEMAC</option>
-                  <option value="crypto">Crypto USDT (TRC-20)</option>
-                </select>
+                  Voir tout ({transactions.length}) →
+                </button>
               </div>
 
-              <div>
-                <label className="text-[11px] text-zinc-400 block mb-1">
-                  {cfgMethod.includes("bank") ? "IBAN / RIB Bancaire" : "Numéro de téléphone"}
-                </label>
-                <input
-                  type="text"
-                  value={cfgMethod.includes("bank") ? cfgBankRib : cfgMomoNumber}
-                  onChange={(e) =>
-                    cfgMethod.includes("bank") ? setCfgBankRib(e.target.value) : setCfgMomoNumber(e.target.value)
-                  }
-                  placeholder={cfgMethod.includes("bank") ? "CI093 01234..." : "+225 07..."}
-                  className="w-full h-9 px-3 rounded-xl bg-[#14161b] border border-white/10 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-zinc-400 block mb-1">Nom du titulaire</label>
-                <input
-                  type="text"
-                  value={cfgAccountHolder}
-                  onChange={(e) => setCfgAccountHolder(e.target.value)}
-                  placeholder="Ex: Johan Désiré"
-                  className="w-full h-9 px-3 rounded-xl bg-[#14161b] border border-white/10 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsConfigDrawerOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-2"
-              >
-                <Check className="size-4" />
-                <span>Enregistrer et rendre mes produits visibles</span>
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-
-      {/* 3 Metric Cards calculated directly from real transactions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        
-        {/* Available Payout Balance */}
-        <div className="rounded-2xl border border-white/[0.08] bg-[#0c0d0e] p-5 space-y-2">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span className="font-semibold">Solde Disponible Immédiat</span>
-            <span className={`size-2 rounded-full ${availableBalance > 0 ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"}`} />
-          </div>
-          <div className="text-2xl sm:text-3xl font-extrabold font-mono text-white tracking-tight">
-            {formatCurrency(availableBalance, activeCurrency)}
-          </div>
-        </div>
-
-        {/* Total Gross Volume */}
-        <div className="rounded-2xl border border-white/[0.08] bg-[#0c0d0e] p-5 space-y-2">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span className="font-semibold">Volume Brut Encaissé</span>
-            <ArrowDownLeft className="size-4 text-[#00D26A]" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-extrabold font-mono text-[#00D26A] tracking-tight">
-            {formatCurrency(totalGrossVolume, activeCurrency)}
-          </div>
-        </div>
-
-        {/* Processing Fees */}
-        <div className="rounded-2xl border border-white/[0.08] bg-[#0c0d0e] p-5 space-y-2">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span className="font-semibold">Frais Plateforme Mansa (3%)</span>
-            <ShieldCheck className="size-4 text-emerald-400" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-extrabold font-mono text-zinc-300 tracking-tight">
-            {formatCurrency(totalFees, activeCurrency)}
-          </div>
-        </div>
-
-      </div>
-
-      {/* Transactions Section */}
-      <div className="rounded-2xl border border-white/[0.08] bg-[#0c0d0e] p-5 space-y-4">
-        
-        {/* Filters & Search Toolbar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-white/5">
-          
-          {/* Status Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1">
-            {[
-              { id: "all", label: "Toutes les transactions" },
-              { id: "succeeded", label: "Réussies (Mobile Money & Cartes)" },
-              { id: "refunded", label: "Remboursées" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setFilterStatus(tab.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                  filterStatus === tab.id
-                    ? "bg-[#00D26A] text-black font-bold"
-                    : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Search field */}
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-2.5 size-3.5 text-zinc-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher par client, email, #TX..."
-              className="w-full rounded-xl border border-white/10 bg-[#16181f] pl-9 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-[#00D26A]"
-            />
-          </div>
-
-        </div>
-
-        {/* Transactions Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-white/[0.08] text-[11px] font-medium text-zinc-400">
-                <th className="py-3 px-3">Transaction</th>
-                <th className="py-3 px-3">Client</th>
-                <th className="py-3 px-3">Produit</th>
-                <th className="py-3 px-3">Moyen de Paiement</th>
-                <th className="py-3 px-3">Montant Brut</th>
-                <th className="py-3 px-3">Frais afhub</th>
-                <th className="py-3 px-3">Net perçu</th>
-                <th className="py-3 px-3">Statut</th>
-                <th className="py-3 px-3 text-right">Reçu</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-white/[0.04]">
-              {filteredTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="py-16 px-4 text-center">
-                    <div className="flex flex-col items-center justify-center max-w-md mx-auto space-y-4">
-                      <div className="size-12 rounded-2xl bg-[#151515] border border-white/10 flex items-center justify-center text-[#3DDC84]">
-                        <CreditCard className="size-6" />
-                      </div>
-                      <div className="space-y-1">
-                        <h3 className="text-base font-bold text-white font-heading">
-                          {lang === "fr" ? "Aucune transaction enregistrée" : "No transactions found"}
-                        </h3>
-                        <p className="text-xs text-[#B6B5B0] leading-relaxed">
-                          {lang === "fr"
-                            ? "Vos ventes Wave, Orange Money, MTN MoMo et Cartes apparaîtront ici automatiquement dès qu'un client effectuera un achat."
-                            : "Your Mobile Money and Card transactions will appear here in real time."}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center justify-center gap-2.5">
-                        <button
-                          onClick={() => setIsNewSaleModalOpen(true)}
-                          className="mansa-btn-green px-4 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer"
-                        >
-                          <Plus className="size-3.5" />
-                          <span>{lang === "fr" ? "+ Enregistrer une vente" : "+ Log a Sale"}</span>
-                        </button>
-                        <button
-                          onClick={async () => {
-                            const creatorKey = profile?.uid || user?.email || "creator-default";
-                            await seedRealisticDemoData(creatorKey, user?.email || "createur@mansa.af", profile?.displayName || "Créateur Mansa");
-                          }}
-                          className="px-4 py-2 text-xs font-bold rounded-xl border border-[#00D26A]/40 bg-[#00D26A]/10 hover:bg-[#00D26A]/20 text-[#00D26A] flex items-center gap-2 cursor-pointer transition-colors"
-                        >
-                          <Zap className="size-3.5" />
-                          <span>{lang === "fr" ? "Simuler 24 transactions" : "Simulate 24 Transactions"}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredTransactions.map((tx) => (
-                  <tr
+              <div className="space-y-2.5">
+                {transactions.slice(0, 4).map((tx) => (
+                  <div
                     key={tx.id}
                     onClick={() => setSelectedTx(tx)}
-                    className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                    className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] transition-all cursor-pointer border border-white/[0.04]"
                   >
-                    {/* Transaction ID + Date */}
-                    <td className="py-3.5 px-3 whitespace-nowrap">
-                      <div className="font-mono font-bold text-white">{tx.id}</div>
-                      <div className="text-[10px] text-zinc-500 font-mono">
-                        {tx.date} à {tx.time}
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span>{tx.productName}</span>
+                        <span className="text-[10px] text-zinc-500">· {tx.countryFlag}</span>
                       </div>
-                    </td>
-
-                    {/* Customer */}
-                    <td className="py-3.5 px-3 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm">{tx.countryFlag}</span>
-                        <span className="font-semibold text-white">{tx.customerName}</span>
+                      <div className="text-[11px] text-zinc-400">
+                        {tx.customerName} · {tx.paymentMethodLabel}
                       </div>
-                      <div className="text-[10px] text-zinc-400">{tx.customerEmail}</div>
-                    </td>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-mono font-bold text-emerald-400">
+                        +{tx.amountNetFormatted}
+                      </div>
+                      <div className="text-[10px] text-zinc-500">{tx.date}</div>
+                    </div>
+                  </div>
+                ))}
 
-                    {/* Product */}
-                    <td className="py-3.5 px-3 text-zinc-300 whitespace-nowrap">
-                      {tx.productName}
-                    </td>
+                {transactions.length === 0 && (
+                  <div className="py-8 text-center text-xs text-zinc-500">
+                    Aucune vente pour le moment. Créez une vente manuelle pour tester le système.
+                  </div>
+                )}
+              </div>
+            </div>
 
-                    {/* Method */}
-                    <td className="py-3.5 px-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-white/5 border border-white/5 text-zinc-300">
-                        <Smartphone className="size-3 text-emerald-400" />
-                        {tx.paymentMethodLabel}
-                      </span>
-                    </td>
+            {/* Aperçu Retraits Récents */}
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0c0d0e] p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                <div className="flex items-center gap-2">
+                  <ArrowUpRight className="size-4 text-sky-400" />
+                  <h3 className="text-sm font-bold text-white">Historique Récent des Retraits</h3>
+                </div>
+                <button
+                  onClick={() => setActiveTab("withdrawals")}
+                  className="text-xs text-sky-400 hover:underline cursor-pointer"
+                >
+                  Voir tout ({withdrawals.length}) →
+                </button>
+              </div>
 
-                    {/* Gross */}
-                    <td className="py-3.5 px-3 font-mono text-zinc-300 whitespace-nowrap">
-                      {tx.amountGrossFormatted}
-                    </td>
+              <div className="space-y-2.5">
+                {withdrawals.slice(0, 4).map((w) => (
+                  <div
+                    key={w.id}
+                    onClick={() => setSelectedWithdrawal(w)}
+                    className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] transition-all cursor-pointer border border-white/[0.04]"
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span>{w.payoutMethodLabel}</span>
+                        <span
+                          className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded font-bold ${
+                            w.status === "completed"
+                              ? "bg-emerald-500/20 text-emerald-400"
+                              : w.status === "processing"
+                              ? "bg-sky-500/20 text-sky-400"
+                              : "bg-amber-500/20 text-amber-400"
+                          }`}
+                        >
+                          {w.status === "completed"
+                            ? "Versé"
+                            : w.status === "processing"
+                            ? "En cours"
+                            : "En attente"}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-zinc-400">Réf: {w.referenceNumber}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-mono font-bold text-white">
+                        {formatCurrency(w.amount, w.currency as CurrencyCode)}
+                      </div>
+                      <div className="text-[10px] text-zinc-500">
+                        {new Date(w.requestedAt).toLocaleDateString("fr-FR")}
+                      </div>
+                    </div>
+                  </div>
+                ))}
 
-                    {/* Fee */}
-                    <td className="py-3.5 px-3 font-mono text-zinc-500 whitespace-nowrap">
-                      -{tx.feeAmountFormatted}
-                    </td>
+                {withdrawals.length === 0 && (
+                  <div className="py-8 text-center text-xs text-zinc-500">
+                    Aucun retrait demandé pour le moment.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-                    {/* Net */}
-                    <td className="py-3.5 px-3 font-mono font-bold text-emerald-400 whitespace-nowrap">
-                      {tx.amountNetFormatted}
-                    </td>
+      {/* ========================================================================= */}
+      {/* TAB 2: HISTORIQUE DES VENTES */}
+      {/* ========================================================================= */}
+      {activeTab === "sales" && (
+        <div className="space-y-4">
+          {/* Controls & Search */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3.5 top-3 size-4 text-zinc-500" />
+              <input
+                type="text"
+                placeholder="Rechercher par client, email, produit ou référence #TX..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-[#121316] pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:border-emerald-500 outline-none"
+              />
+            </div>
 
-                    {/* Status */}
-                    <td className="py-3.5 px-3 whitespace-nowrap">
-                      {tx.status === "succeeded" && (
+            <div className="flex items-center gap-2">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="rounded-xl border border-white/10 bg-[#121316] px-3 py-2 text-xs text-white outline-none cursor-pointer"
+              >
+                <option value="all">Tous les statuts</option>
+                <option value="succeeded">Validés (Encaissés)</option>
+                <option value="pending">En attente</option>
+                <option value="refunded">Remboursés</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Transactions Table */}
+          <div className="w-full rounded-2xl border border-white/[0.08] bg-[#0c0d0e] overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-zinc-300">
+                <thead className="border-b border-white/[0.08] bg-white/[0.02] text-[11px] font-semibold text-zinc-400">
+                  <tr>
+                    <th className="py-3 px-4">Date & Réf</th>
+                    <th className="py-3 px-4">Client Acheteur</th>
+                    <th className="py-3 px-4">Produit / Offre</th>
+                    <th className="py-3 px-4">Mode de Paiement</th>
+                    <th className="py-3 px-4">Brut</th>
+                    <th className="py-3 px-4">Frais (3%)</th>
+                    <th className="py-3 px-4">Net Crédité</th>
+                    <th className="py-3 px-4">Statut</th>
+                    <th className="py-3 px-4 text-right">Reçu</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {filteredTransactions.map((tx) => (
+                    <tr
+                      key={tx.id}
+                      onClick={() => setSelectedTx(tx)}
+                      className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                    >
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="font-medium text-white">{tx.date}</div>
+                        <div className="text-[10px] font-mono text-zinc-500">#{tx.id.substring(0, 12)}</div>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="font-semibold text-white flex items-center gap-1.5">
+                          <span>{tx.customerName}</span>
+                          <span className="text-[10px]">{tx.countryFlag}</span>
+                        </div>
+                        <div className="text-[10px] font-mono text-zinc-400">{tx.customerEmail}</div>
+                      </td>
+                      <td className="py-3.5 px-4 max-w-xs truncate text-zinc-200 font-medium">
+                        {tx.productName}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.05] px-2 py-0.5 text-[11px] text-zinc-300">
+                          {tx.paymentMethodLabel}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-semibold text-zinc-300 whitespace-nowrap">
+                        {tx.amountGrossFormatted}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-zinc-500 whitespace-nowrap">
+                        -{tx.feeAmountFormatted}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-emerald-400 whitespace-nowrap">
+                        +{tx.amountNetFormatted}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
                           <CheckCircle2 className="size-3" />
-                          <span>Validé</span>
+                          <span>Encaissé</span>
                         </span>
-                      )}
-                      {tx.status === "refunded" && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
-                          <AlertCircle className="size-3" />
-                          <span>Remboursé</span>
-                        </span>
-                      )}
-                    </td>
+                      </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTx(tx);
+                          }}
+                          className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer"
+                          title="Voir le reçu"
+                        >
+                          <FileText className="size-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
 
-                    {/* Action */}
-                    <td className="py-3.5 px-3 text-right whitespace-nowrap">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTx(tx);
-                        }}
-                        className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                        title="Voir le reçu"
-                      >
-                        <FileText className="size-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                  {filteredTransactions.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="py-12 text-center text-zinc-500">
+                        Aucune transaction trouvée correspondant aux critères.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
+      )}
 
-      </div>
+      {/* ========================================================================= */}
+      {/* TAB 3: GESTION & HISTORIQUE DES RETRAITS */}
+      {/* ========================================================================= */}
+      {activeTab === "withdrawals" && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-white/[0.08] bg-[#0c0d0e]">
+            <div>
+              <h3 className="text-base font-bold text-white">Demandes de Virement de Fonds</h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Retirez vos fonds disponibles vers votre compte Wave, Orange Money, MTN MoMo ou compte bancaire.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-[10px] text-zinc-400">Disponible au retrait :</div>
+                <div className="text-base font-bold font-mono text-emerald-400">
+                  {formatCurrency(balance.availableBalance, activeCurrency)}
+                </div>
+              </div>
+              <button
+                onClick={handleOpenWithdrawalDialog}
+                className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+              >
+                <ArrowUpRight className="size-4" />
+                <span>Demander un virement</span>
+              </button>
+            </div>
+          </div>
 
-      {/* AFRICAN PAYOUT REQUEST MODAL */}
+          {/* Table of withdrawals */}
+          <div className="w-full rounded-2xl border border-white/[0.08] bg-[#0c0d0e] overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-zinc-300">
+                <thead className="border-b border-white/[0.08] bg-white/[0.02] text-[11px] font-semibold text-zinc-400">
+                  <tr>
+                    <th className="py-3 px-4">Référence</th>
+                    <th className="py-3 px-4">Date de Demande</th>
+                    <th className="py-3 px-4">Montant du Virement</th>
+                    <th className="py-3 px-4">Compte Destinataire</th>
+                    <th className="py-3 px-4">Titulaire</th>
+                    <th className="py-3 px-4">Frais Mansa</th>
+                    <th className="py-3 px-4">Statut</th>
+                    <th className="py-3 px-4 text-right">Reçu</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {withdrawals.map((w) => (
+                    <tr
+                      key={w.id}
+                      onClick={() => setSelectedWithdrawal(w)}
+                      className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                    >
+                      <td className="py-3.5 px-4 font-mono font-bold text-white whitespace-nowrap">
+                        {w.referenceNumber}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap text-zinc-400">
+                        {new Date(w.requestedAt).toLocaleDateString("fr-FR")}{" "}
+                        <span className="text-[10px] text-zinc-500">
+                          {new Date(w.requestedAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-white whitespace-nowrap">
+                        {formatCurrency(w.amount, w.currency as CurrencyCode)}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="text-zinc-200 font-medium">{w.payoutMethodLabel}</span>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap text-zinc-300">
+                        {w.accountHolder}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-emerald-400 whitespace-nowrap">
+                        0 FCFA (Gratuit)
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {w.status === "completed" && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                            <CheckCircle2 className="size-3" />
+                            <span>Versé</span>
+                          </span>
+                        )}
+                        {w.status === "processing" && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-400">
+                            <Clock className="size-3" />
+                            <span>En cours de traitement</span>
+                          </span>
+                        )}
+                        {w.status === "pending" && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
+                            <Clock className="size-3" />
+                            <span>En attente de validation</span>
+                          </span>
+                        )}
+                        {w.status === "rejected" && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold text-rose-400">
+                            <AlertCircle className="size-3" />
+                            <span>Rejeté</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedWithdrawal(w);
+                          }}
+                          className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer"
+                          title="Voir le bordereau de virement"
+                        >
+                          <FileText className="size-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {withdrawals.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-zinc-500">
+                        Aucun virement demandé pour l'instant.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: MOYENS DE RETRAIT & KYC */}
+      {/* ========================================================================= */}
+      {activeTab === "payout_methods" && (
+        <div className="space-y-6">
+          {/* Top banner */}
+          <div className="p-5 rounded-2xl border border-white/[0.08] bg-[#0c0d0e] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-bold text-white">Comptes de Retrait Enregistrés</h3>
+              <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
+                Ajoutez vos comptes Wave, Orange Money, MTN MoMo ou vos coordonnées bancaires (IBAN/RIB).
+                Ces comptes sont utilisés exclusivement pour vous verser vos fonds gagnés.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsAddMethodModalOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5 shrink-0"
+            >
+              <Plus className="size-4" />
+              <span>Ajouter un compte de retrait</span>
+            </button>
+          </div>
+
+          {/* Grid of configured methods */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {payoutMethods.map((method) => (
+              <div
+                key={method.id}
+                className={`rounded-2xl border p-5 space-y-4 relative ${
+                  method.isDefault
+                    ? "border-emerald-500/40 bg-gradient-to-b from-[#0f2115] to-[#0c0d0e]"
+                    : "border-white/[0.08] bg-[#0c0d0e]"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="size-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white">
+                      {method.type.includes("bank") ? (
+                        <Building2 className="size-4 text-sky-400" />
+                      ) : method.type.includes("crypto") ? (
+                        <Wallet className="size-4 text-amber-400" />
+                      ) : (
+                        <Smartphone className="size-4 text-emerald-400" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">{method.label}</h4>
+                      <span className="text-[10px] text-zinc-400">{method.country || "Afrique de l'Ouest"}</span>
+                    </div>
+                  </div>
+
+                  {method.isDefault ? (
+                    <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      Par défaut
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setDefaultPayoutMethod(creatorKey, method.id);
+                        showFeedback("info", `${method.label} défini comme compte par défaut.`);
+                      }}
+                      className="text-[10px] text-zinc-400 hover:text-white underline cursor-pointer"
+                    >
+                      Définir par défaut
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-1.5 text-xs bg-black/30 rounded-xl p-3 border border-white/5">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Titulaire :</span>
+                    <span className="font-semibold text-zinc-200">{method.accountHolder}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Identifiant :</span>
+                    <span className="font-mono font-bold text-white">{method.accountIdentifier}</span>
+                  </div>
+                  {method.bankName && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Banque :</span>
+                      <span className="text-zinc-300">{method.bankName}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
+                    <CheckCircle2 className="size-3" />
+                    Compte vérifié pour les retraits
+                  </span>
+                  {payoutMethods.length > 1 && (
+                    <button
+                      onClick={() => {
+                        removePayoutMethod(creatorKey, method.id);
+                        showFeedback("info", "Compte de retrait supprimé.");
+                      }}
+                      className="p-1 rounded-lg text-zinc-500 hover:text-rose-400 transition-colors cursor-pointer"
+                      title="Supprimer ce compte"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {payoutMethods.length === 0 && (
+              <div className="col-span-full py-12 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.01] space-y-3">
+                <AlertTriangle className="size-8 text-amber-400 mx-auto" />
+                <h4 className="text-sm font-bold text-white">Aucun moyen de retrait configuré</h4>
+                <p className="text-xs text-zinc-400 max-w-md mx-auto">
+                  Vos ventes continuent normalement et vos fonds s'accumulent en toute sécurité.
+                  Renseignez un compte Wave, Orange Money, MTN ou bancaire pour demander vos virements.
+                </p>
+                <button
+                  onClick={() => setIsAddMethodModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all cursor-pointer"
+                >
+                  Ajouter mon premier compte de retrait
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* KYC & Identity Verification Section */}
+          <div className="p-6 rounded-2xl border border-white/[0.08] bg-[#0c0d0e] space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center">
+                  <ShieldCheck className="size-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">Vérification d'Identité Créateur (KYC)</h4>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Conforme aux normes de conformité bancaire BCEAO & UEMOA.
+                  </p>
+                </div>
+              </div>
+
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <CheckCircle2 className="size-3.5" />
+                <span>Niveau 2 : Vérifié</span>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-white/[0.02] p-4 rounded-xl border border-white/5">
+              <div>
+                <span className="text-zinc-500 block">Pièce justificative :</span>
+                <span className="font-semibold text-white">Carte Nationale d'Identité (CNI)</span>
+              </div>
+              <div>
+                <span className="text-zinc-500 block">Numéro de document :</span>
+                <span className="font-mono text-zinc-200">CI-0994-882190</span>
+              </div>
+              <div>
+                <span className="text-zinc-500 block">Plafond de retrait autorisé :</span>
+                <span className="font-bold text-emerald-400">Illimité (Niveau Pro)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: DEMANDE DE VIREMENT (WITHDRAWAL) */}
+      {/* ========================================================================= */}
       <ModalOverlay
         isOpen={isPayoutModalOpen}
-        onClose={() => setIsPayoutModalOpen(false)}
+        onClose={() => {
+          setIsPayoutModalOpen(false);
+          setWithdrawalSuccess(null);
+        }}
         contentClassName="max-w-md mx-auto"
       >
         <div className="w-full rounded-2xl border border-white/10 bg-[#121316] p-6 shadow-2xl space-y-4">
-          
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2">
-              <ArrowUpRight className="size-5 text-[#00D26A]" />
+              <ArrowUpRight className="size-5 text-emerald-400" />
               <h3 className="text-base font-bold text-white">Demande de Virement de vos Fonds</h3>
             </div>
             <button
-              onClick={() => setIsPayoutModalOpen(false)}
+              onClick={() => {
+                setIsPayoutModalOpen(false);
+                setWithdrawalSuccess(null);
+              }}
               className="text-zinc-400 hover:text-white cursor-pointer"
             >
               <X className="size-4" />
             </button>
           </div>
 
-          {payoutSuccess ? (
-            <div className="py-8 text-center space-y-3">
+          {/* CAS 1: AUCUN MOYEN DE RETRAIT CONFIGURÉ */}
+          {!hasWithdrawalConfigured ? (
+            <div className="py-4 space-y-4 text-center">
+              <div className="size-12 mx-auto rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                <AlertTriangle className="size-6" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">Moyen de retrait non configuré</h4>
+                <p className="text-xs text-zinc-300 mt-1.5 leading-relaxed">
+                  Votre solde disponible est de{" "}
+                  <strong className="text-emerald-400 font-mono">
+                    {formatCurrency(balance.availableBalance, activeCurrency)}
+                  </strong>
+                  . Pour demander un virement, vous devez d'abord renseigner votre compte Mobile Money
+                  (Wave, Orange, MTN) ou vos coordonnées bancaires.
+                </p>
+              </div>
+
+              <div className="bg-white/[0.03] p-3 rounded-xl border border-white/5 text-xs text-zinc-400 text-left">
+                ℹ️ Vos ventes continuent normalement. Vous pouvez configurer votre compte de retrait à
+                tout moment pour libérer vos virements.
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPayoutModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-white/10 text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  Fermer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPayoutModalOpen(false);
+                    setActiveTab("payout_methods");
+                    setIsAddMethodModalOpen(true);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all cursor-pointer shadow-md"
+                >
+                  Configurer mon compte
+                </button>
+              </div>
+            </div>
+          ) : withdrawalSuccess ? (
+            /* CAS 2: VIREMENT RÉUSSI */
+            <div className="py-6 text-center space-y-3">
               <div className="flex size-14 mx-auto items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                 <CheckCircle2 className="size-8" />
               </div>
-              <h4 className="text-base font-bold text-white">Virement afhub Transmis avec Succès !</h4>
-              <p className="text-xs text-zinc-400 font-mono">
-                {parseInt(payoutAmount || "0").toLocaleString("fr-FR")} FCFA ont été envoyés vers votre compte de retrait.
+              <h4 className="text-base font-bold text-white">Demande de Virement Transmise !</h4>
+              <p className="text-xs text-zinc-300">
+                <strong className="font-mono text-emerald-400">
+                  {formatCurrency(withdrawalSuccess.amount, withdrawalSuccess.currency as CurrencyCode)}
+                </strong>{" "}
+                ont été transmis vers votre compte {withdrawalSuccess.payoutMethodLabel}.
               </p>
+              <div className="p-3 bg-black/40 rounded-xl border border-white/5 text-[11px] font-mono text-zinc-400">
+                Réf: {withdrawalSuccess.referenceNumber}
+              </div>
+              <button
+                onClick={() => {
+                  setIsPayoutModalOpen(false);
+                  setWithdrawalSuccess(null);
+                  setActiveTab("withdrawals");
+                }}
+                className="w-full mt-2 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all cursor-pointer"
+              >
+                Consulter mes virements
+              </button>
             </div>
           ) : (
-            <form onSubmit={handleRequestPayout} className="space-y-4">
+            /* CAS 3: FORMULAIRE DE RETRAIT NORMAL */
+            <form onSubmit={handleSubmitWithdrawal} className="space-y-4">
+              {withdrawalError && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="size-4 shrink-0 text-rose-400" />
+                  <span>{withdrawalError}</span>
+                </div>
+              )}
+
               <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1">
-                  Montant du virement (FCFA)
-                </label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs font-semibold text-zinc-300">Montant à virer</label>
+                  <span className="text-[11px] text-zinc-400">
+                    Disponible :{" "}
+                    <strong className="text-emerald-400 font-mono">
+                      {formatCurrency(balance.availableBalance, activeCurrency)}
+                    </strong>
+                  </span>
+                </div>
                 <div className="relative">
                   <input
                     type="number"
-                    max={2984500}
                     min={5000}
-                    value={payoutAmount}
-                    onChange={(e) => setPayoutAmount(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-[#16181f] pl-4 pr-14 py-2.5 font-mono text-sm text-white focus:border-[#00D26A] outline-none"
+                    max={balance.availableBalance}
+                    value={withdrawalAmount}
+                    onChange={(e) => setWithdrawalAmount(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-[#16181f] pl-4 pr-16 py-2.5 font-mono text-sm text-white focus:border-emerald-500 outline-none"
+                    placeholder="50000"
                     required
                   />
-                  <span className="absolute right-3.5 top-3 font-mono text-xs text-zinc-400">FCFA</span>
+                  <span className="absolute right-3.5 top-3 font-mono text-xs text-zinc-400 font-bold">
+                    {activeCurrency}
+                  </span>
                 </div>
-                <span className="text-[10px] text-zinc-500 mt-1 block">
-                  Solde disponible total : <strong className="text-emerald-400">2 984 500 FCFA</strong>
-                </span>
+
+                {/* Quick percentage buttons */}
+                <div className="flex items-center gap-2 mt-2">
+                  {[0.25, 0.5, 0.75, 1.0].map((ratio) => {
+                    const quickAmt = Math.floor(balance.availableBalance * ratio);
+                    return (
+                      <button
+                        key={ratio}
+                        type="button"
+                        onClick={() => setWithdrawalAmount(quickAmt.toString())}
+                        className="flex-1 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-mono font-semibold text-zinc-400 hover:text-white border border-white/5 cursor-pointer"
+                      >
+                        {ratio === 1 ? "100% (Max)" : `${ratio * 100}%`}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 mb-1">
-                  Destination du versement
+                  Compte de destination
                 </label>
                 <select
-                  value={payoutMethod}
-                  onChange={(e) => setPayoutMethod(e.target.value)}
+                  value={selectedMethodId}
+                  onChange={(e) => setSelectedMethodId(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-[#16181f] p-2.5 text-xs text-white outline-none cursor-pointer"
                 >
-                  <option value="wave_ci">🇨🇮 Wave Côte d'Ivoire · +225 07 88 92 10 44 (Instantané)</option>
-                  <option value="orange_sn">🇸🇳 Wave / Orange Money Sénégal · +221 77 450 12 89</option>
-                  <option value="ecobank_ci">🌍 Virement Bancaire Ecobank UEMOA · CI059 •••• 8901</option>
-                  <option value="coris_bank">🌍 Virement Bancaire Coris Bank International</option>
-                  <option value="uba_bank">🌍 Virement Bancaire UBA (United Bank for Africa)</option>
-                  <option value="mtn_cm">🇨🇲 MTN Mobile Money Cameroun · +237 690 00 00 00</option>
+                  {payoutMethods.map((method) => (
+                    <option key={method.id} value={method.id}>
+                      {method.label} ({method.accountIdentifier}) · {method.accountHolder}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3 text-xs text-zinc-400 space-y-1">
+              <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3 text-xs text-zinc-400 space-y-1.5">
                 <div className="flex justify-between">
-                  <span>Frais de retrait Mobile Money :</span>
-                  <span className="text-emerald-400 font-mono">0 FCFA (Pris en charge par afhub)</span>
+                  <span>Frais de virement :</span>
+                  <span className="text-emerald-400 font-mono font-bold">0 FCFA (Pris en charge)</span>
                 </div>
-                <div className="flex justify-between font-bold text-white pt-1 border-t border-white/5">
-                  <span>Montant net versé :</span>
-                  <span className="font-mono text-emerald-400">
-                    {parseInt(payoutAmount || "0").toLocaleString("fr-FR")} FCFA
+                <div className="flex justify-between">
+                  <span>Délai estimé :</span>
+                  <span className="text-white font-medium">Instantané à 15 minutes</span>
+                </div>
+                <div className="flex justify-between font-bold text-white pt-1.5 border-t border-white/5">
+                  <span>Net à recevoir sur votre compte :</span>
+                  <span className="font-mono text-emerald-400 text-sm">
+                    {formatCurrency(parseFloat(withdrawalAmount) || 0, activeCurrency)}
                   </span>
                 </div>
               </div>
@@ -737,18 +1461,154 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#00D26A] hover:bg-[#10E47A] text-black text-xs font-bold transition-all cursor-pointer shadow-md"
+                  disabled={isSubmittingWithdrawal || balance.availableBalance < 5000}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-black text-xs font-bold transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
                 >
-                  Confirmer le virement
+                  {isSubmittingWithdrawal ? (
+                    <RefreshCw className="size-4 animate-spin" />
+                  ) : (
+                    <ArrowUpRight className="size-4" />
+                  )}
+                  <span>Confirmer le virement</span>
                 </button>
               </div>
             </form>
           )}
-
         </div>
       </ModalOverlay>
 
-      {/* TRANSACTION RECEIPT MODAL */}
+      {/* ========================================================================= */}
+      {/* MODAL: AJOUTER UN MOYEN DE RETRAIT */}
+      {/* ========================================================================= */}
+      <ModalOverlay
+        isOpen={isAddMethodModalOpen}
+        onClose={() => setIsAddMethodModalOpen(false)}
+        contentClassName="max-w-md mx-auto"
+      >
+        <div className="w-full rounded-2xl border border-white/10 bg-[#121316] p-6 shadow-2xl space-y-4">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2">
+              <CreditCard className="size-5 text-emerald-400" />
+              <h3 className="text-base font-bold text-white">Nouveau Compte de Retrait</h3>
+            </div>
+            <button
+              onClick={() => setIsAddMethodModalOpen(false)}
+              className="text-zinc-400 hover:text-white cursor-pointer"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSaveNewMethod} className="space-y-3.5 text-xs">
+            <div>
+              <label className="block text-zinc-300 font-semibold mb-1">Moyen de retrait</label>
+              <select
+                value={newMethodType}
+                onChange={(e) => {
+                  const val = e.target.value as PayoutMethodType;
+                  setNewMethodType(val);
+                  if (val === "wave") setNewMethodLabel("Wave Côte d'Ivoire");
+                  else if (val === "orange_money") setNewMethodLabel("Orange Money Côte d'Ivoire");
+                  else if (val === "mtn_momo") setNewMethodLabel("MTN Mobile Money");
+                  else if (val === "moov_money") setNewMethodLabel("Moov Money");
+                  else if (val === "bank_uemoa") setNewMethodLabel("Compte Bancaire UEMOA (RIB)");
+                  else if (val === "bank_cemac") setNewMethodLabel("Compte Bancaire CEMAC");
+                  else if (val === "crypto_usdt") setNewMethodLabel("USDT Wallet (TRC-20)");
+                }}
+                className="w-full rounded-xl border border-white/10 bg-[#16181f] p-2.5 text-white outline-none cursor-pointer"
+              >
+                <option value="wave">🇨🇮 Wave Côte d'Ivoire (Instantané)</option>
+                <option value="orange_money">🇨🇮 / 🇸🇳 Orange Money</option>
+                <option value="mtn_momo">🌍 MTN MoMo (Bénin, Cameroun, Côte d'Ivoire)</option>
+                <option value="moov_money">🌍 Moov Money Flooz</option>
+                <option value="bank_uemoa">🌍 Virement Bancaire UEMOA (Ecobank, Coris, UBA, SG)</option>
+                <option value="crypto_usdt">🪙 USDT (Réseau TRC-20)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-zinc-300 font-semibold mb-1">Nom ou libellé du compte</label>
+              <input
+                type="text"
+                value={newMethodLabel}
+                onChange={(e) => setNewMethodLabel(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white outline-none focus:border-emerald-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-zinc-300 font-semibold mb-1">
+                Nom complet du titulaire du compte
+              </label>
+              <input
+                type="text"
+                value={newMethodHolder}
+                onChange={(e) => setNewMethodHolder(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white outline-none focus:border-emerald-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-zinc-300 font-semibold mb-1">
+                {newMethodType.includes("bank")
+                  ? "Numéro IBAN / RIB complet (24 caractères)"
+                  : newMethodType.includes("crypto")
+                  ? "Adresse Wallet USDT (TRC-20)"
+                  : "Numéro de téléphone Mobile Money avec indicatif (+225...)"}
+              </label>
+              <input
+                type="text"
+                value={newMethodIdentifier}
+                onChange={(e) => setNewMethodIdentifier(e.target.value)}
+                placeholder={
+                  newMethodType.includes("bank")
+                    ? "CI093 01234 56789012345 67"
+                    : newMethodType.includes("crypto")
+                    ? "TYDzsxdhP4WshT..."
+                    : "+225 07 88 99 00 11"
+                }
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 font-mono text-white outline-none focus:border-emerald-500"
+                required
+              />
+            </div>
+
+            {newMethodType.includes("bank") && (
+              <div>
+                <label className="block text-zinc-300 font-semibold mb-1">Nom de la banque</label>
+                <input
+                  type="text"
+                  value={newMethodBank}
+                  onChange={(e) => setNewMethodBank(e.target.value)}
+                  placeholder="Ex: Ecobank Côte d'Ivoire, NSIA Banque, Coris..."
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white outline-none focus:border-emerald-500"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsAddMethodModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all cursor-pointer shadow-md"
+              >
+                Enregistrer le compte
+              </button>
+            </div>
+          </form>
+        </div>
+      </ModalOverlay>
+
+      {/* ========================================================================= */}
+      {/* MODAL: REÇU DE VENTE (TRANSACTION) */}
+      {/* ========================================================================= */}
       <ModalOverlay
         isOpen={!!selectedTx}
         onClose={() => setSelectedTx(null)}
@@ -758,8 +1618,8 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
           <div className="w-full rounded-2xl border border-white/10 bg-[#121316] p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div>
-                <span className="text-[10px] font-mono text-[#00D26A] uppercase font-bold">
-                  Reçu de Paiement afhub
+                <span className="text-[10px] font-mono text-emerald-400 uppercase font-bold">
+                  Bordereau de Vente Mansa
                 </span>
                 <h3 className="text-base font-bold text-white mt-0.5">Détail de la Transaction</h3>
               </div>
@@ -773,8 +1633,14 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
 
             <div className="space-y-3 text-xs">
               <div className="flex justify-between py-2 border-b border-white/5">
-                <span className="text-zinc-400">Référence #TX</span>
+                <span className="text-zinc-400">Identifiant #TX</span>
                 <span className="font-mono font-bold text-white">{selectedTx.id}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/5">
+                <span className="text-zinc-400">Date et heure</span>
+                <span className="text-white">
+                  {selectedTx.date} à {selectedTx.time}
+                </span>
               </div>
               <div className="flex justify-between py-2 border-b border-white/5">
                 <span className="text-zinc-400">Client Acheteur</span>
@@ -787,21 +1653,25 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
                 <span className="font-mono text-zinc-300">{selectedTx.customerEmail}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-white/5">
-                <span className="text-zinc-400">Produit acheté</span>
+                <span className="text-zinc-400">Produit / Offre achetée</span>
                 <span className="font-semibold text-white">{selectedTx.productName}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-white/5">
-                <span className="text-zinc-400">Mode d'encaissement</span>
+                <span className="text-zinc-400">Moyen de paiement utilisé</span>
                 <span className="font-semibold text-emerald-400">{selectedTx.paymentMethodLabel}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-white/5">
-                <span className="text-zinc-400">Montant total</span>
+                <span className="text-zinc-400">Montant brut payé par le client</span>
                 <span className="font-mono font-bold text-white">{selectedTx.amountGrossFormatted}</span>
               </div>
-              <div className="flex justify-between py-2">
-                <span className="text-zinc-400">Net perçu par le créateur</span>
+              <div className="flex justify-between py-2 border-b border-white/5">
+                <span className="text-zinc-400">Frais de plateforme (3%)</span>
+                <span className="font-mono text-zinc-400">-{selectedTx.feeAmountFormatted}</span>
+              </div>
+              <div className="flex justify-between py-2 bg-emerald-500/10 p-2 rounded-xl">
+                <span className="font-semibold text-emerald-300">Montant net crédité au créateur :</span>
                 <span className="font-mono font-bold text-emerald-400 text-sm">
-                  {selectedTx.amountNetFormatted}
+                  +{selectedTx.amountNetFormatted}
                 </span>
               </div>
             </div>
@@ -819,7 +1689,93 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
         )}
       </ModalOverlay>
 
-      {/* NEW MANUAL SALE MODAL (Saves directly to Firestore) */}
+      {/* ========================================================================= */}
+      {/* MODAL: BORDEREAU DE VIREMENT (WITHDRAWAL RECEIPT) */}
+      {/* ========================================================================= */}
+      <ModalOverlay
+        isOpen={!!selectedWithdrawal}
+        onClose={() => setSelectedWithdrawal(null)}
+        contentClassName="max-w-md mx-auto"
+      >
+        {selectedWithdrawal && (
+          <div className="w-full rounded-2xl border border-white/10 bg-[#121316] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div>
+                <span className="text-[10px] font-mono text-sky-400 uppercase font-bold">
+                  Bordereau de Virement afhub
+                </span>
+                <h3 className="text-base font-bold text-white mt-0.5">Détail du Virement</h3>
+              </div>
+              <button
+                onClick={() => setSelectedWithdrawal(null)}
+                className="text-zinc-400 hover:text-white cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between py-2 border-b border-white/5">
+                <span className="text-zinc-400">Référence Virement</span>
+                <span className="font-mono font-bold text-white">{selectedWithdrawal.referenceNumber}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/5">
+                <span className="text-zinc-400">Date de demande</span>
+                <span className="text-white">
+                  {new Date(selectedWithdrawal.requestedAt).toLocaleString("fr-FR")}
+                </span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/5">
+                <span className="text-zinc-400">Montant versé</span>
+                <span className="font-mono font-bold text-emerald-400 text-sm">
+                  {formatCurrency(selectedWithdrawal.amount, selectedWithdrawal.currency as CurrencyCode)}
+                </span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/5">
+                <span className="text-zinc-400">Moyen de destination</span>
+                <span className="font-semibold text-white">{selectedWithdrawal.payoutMethodLabel}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/5">
+                <span className="text-zinc-400">Titulaire</span>
+                <span className="text-zinc-200">{selectedWithdrawal.accountHolder}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/5">
+                <span className="text-zinc-400">Détails destination</span>
+                <span className="text-zinc-300">{selectedWithdrawal.destinationDetails}</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-zinc-400">Statut du virement</span>
+                <span
+                  className={`font-semibold font-mono uppercase text-xs ${
+                    selectedWithdrawal.status === "completed"
+                      ? "text-emerald-400"
+                      : selectedWithdrawal.status === "processing"
+                      ? "text-sky-400"
+                      : "text-amber-400"
+                  }`}
+                >
+                  {selectedWithdrawal.status === "completed"
+                    ? "Versé avec succès"
+                    : selectedWithdrawal.status === "processing"
+                    ? "En cours de traitement"
+                    : "En attente"}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSelectedWithdrawal(null)}
+              className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all cursor-pointer"
+            >
+              Fermer
+            </button>
+          </div>
+        )}
+      </ModalOverlay>
+
+      {/* ========================================================================= */}
+      {/* MODAL: NOUVELLE VENTE MANUELLE */}
+      {/* ========================================================================= */}
       <ModalOverlay
         isOpen={isNewSaleModalOpen}
         onClose={() => setIsNewSaleModalOpen(false)}
@@ -828,7 +1784,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
         <div className="w-full rounded-2xl border border-white/10 bg-[#151515] p-6 shadow-2xl space-y-4">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2">
-              <Plus className="size-5 text-[#3DDC84]" />
+              <Plus className="size-5 text-emerald-400" />
               <h3 className="text-base font-bold text-white font-heading">Enregistrer une Vente Manuelle</h3>
             </div>
             <button
@@ -841,36 +1797,36 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
 
           <form onSubmit={handleCreateSale} className="space-y-3 text-xs">
             <div>
-              <label className="block font-medium text-[#B6B5B0] mb-1">Nom du produit</label>
+              <label className="block font-medium text-zinc-400 mb-1">Nom du produit / offre</label>
               <input
                 type="text"
                 value={saleProductName}
                 onChange={(e) => setSaleProductName(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-[#3DDC84]"
+                className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-emerald-500"
                 required
               />
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block font-medium text-[#B6B5B0] mb-1">Nom du client</label>
+                <label className="block font-medium text-zinc-400 mb-1">Nom du client</label>
                 <input
                   type="text"
                   value={saleCustomerName}
                   onChange={(e) => setSaleCustomerName(e.target.value)}
                   placeholder="Ex: Koffi Emmanuel"
-                  className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-[#3DDC84]"
+                  className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-emerald-500"
                   required
                 />
               </div>
               <div>
-                <label className="block font-medium text-[#B6B5B0] mb-1">Email du client</label>
+                <label className="block font-medium text-zinc-400 mb-1">Email du client</label>
                 <input
                   type="email"
                   value={saleCustomerEmail}
                   onChange={(e) => setSaleCustomerEmail(e.target.value)}
                   placeholder="client@gmail.com"
-                  className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-[#3DDC84]"
+                  className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-emerald-500"
                   required
                 />
               </div>
@@ -878,38 +1834,36 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block font-medium text-[#B6B5B0] mb-1">Montant</label>
+                <label className="block font-medium text-zinc-400 mb-1">Montant brut</label>
                 <input
                   type="number"
                   value={saleAmount}
                   onChange={(e) => setSaleAmount(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-[#3DDC84]"
+                  className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-emerald-500"
                   required
                 />
               </div>
               <div>
-                <label className="block font-medium text-[#B6B5B0] mb-1">Devise</label>
+                <label className="block font-medium text-zinc-400 mb-1">Devise</label>
                 <select
                   value={saleCurrency}
                   onChange={(e) => setSaleCurrency(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-[#3DDC84]"
+                  className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-emerald-500"
                 >
                   <option value="XOF">XOF (FCFA UEMOA)</option>
                   <option value="XAF">XAF (FCFA CEMAC)</option>
-                  <option value="USD">USD ($)</option>
                   <option value="EUR">EUR (€)</option>
-                  <option value="NGN">NGN (₦)</option>
-                  <option value="GHS">GHS (GH₵)</option>
+                  <option value="USD">USD ($)</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block font-medium text-[#B6B5B0] mb-1">Moyen de paiement</label>
+              <label className="block font-medium text-zinc-400 mb-1">Moyen de paiement client</label>
               <select
                 value={salePaymentMethod}
                 onChange={(e) => setSalePaymentMethod(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-[#3DDC84]"
+                className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-emerald-500"
               >
                 <option value="Wave CI">Wave Côte d'Ivoire</option>
                 <option value="Wave SN">Wave Sénégal</option>
@@ -921,12 +1875,12 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
             </div>
 
             <div>
-              <label className="block font-medium text-[#B6B5B0] mb-1">Localisation de l'acheteur</label>
+              <label className="block font-medium text-zinc-400 mb-1">Localisation de l'acheteur</label>
               <input
                 type="text"
                 value={saleLocation}
                 onChange={(e) => setSaleLocation(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-[#3DDC84]"
+                className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -934,21 +1888,28 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ lang = "fr", currenc
               <button
                 type="button"
                 onClick={() => setIsNewSaleModalOpen(false)}
-                className="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold"
+                className="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold cursor-pointer"
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                className="flex-1 py-2 rounded-xl bg-[#3DDC84] hover:bg-[#2FB86A] text-black font-bold"
+                className="flex-1 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold cursor-pointer"
               >
-                Enregistrer la transaction
+                Enregistrer et créditer
               </button>
             </div>
           </form>
         </div>
       </ModalOverlay>
 
+      {/* ========================================================================= */}
+      {/* MODAL: TESTEUR MOBILE MONEY */}
+      {/* ========================================================================= */}
+      <MobileMoneyTesterModal
+        isOpen={isTesterModalOpen}
+        onClose={() => setIsTesterModalOpen(false)}
+      />
     </div>
   );
 };
