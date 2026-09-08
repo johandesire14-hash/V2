@@ -970,30 +970,6 @@ export const EnterpriseMemberView: React.FC<EnterpriseMemberViewProps> = ({
             <MessageSquare className="size-4 text-zinc-300" />
             <span>Assistance</span>
           </button>
-
-          {/* Offres & Produits de l'entreprise */}
-          <button
-            onClick={() => {
-              setActiveTab("accueil");
-              setCompanyTab("produits");
-              if (isMobile) setIsMobileSidebarOpen(false);
-            }}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all cursor-pointer min-h-[44px] ${
-              activeTab === "accueil" && companyTab === "produits"
-                ? "bg-[#181a20] text-white font-semibold border border-white/10 shadow-sm"
-                : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <ShoppingBag className="size-4 text-amber-400" />
-              <span className={activeTab === "accueil" && companyTab === "produits" ? "text-white font-bold" : "text-zinc-200"}>
-                Offres & Produits
-              </span>
-            </div>
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/[0.08] text-zinc-300">
-              {enterpriseOffers.length}
-            </span>
-          </button>
         </nav>
 
         {/* Section inférieure : Produits et fonctionnalités réels de l’entreprise */}
@@ -1072,45 +1048,6 @@ export const EnterpriseMemberView: React.FC<EnterpriseMemberViewProps> = ({
             >
               <ChevronLeft className="size-4 text-zinc-400" />
               <span>Mon Espace Personnel</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Subscription Status Footer */}
-      <div className="p-3.5 border-t border-white/[0.08] space-y-2 shrink-0 bg-[#0c0d10]">
-        {hasPaidOffer ? (
-          <div className="p-3 rounded-xl bg-[#14151a] border border-white/5 space-y-1.5">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-zinc-400">Statut</span>
-              <span className="text-emerald-400 font-bold font-mono">Offre Active</span>
-            </div>
-            <div className="text-xs font-bold text-white truncate">{subscription.productName}</div>
-            <div className="text-[10px] text-zinc-500">{subscription.priceDisplay}</div>
-          </div>
-        ) : (
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-2">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-amber-400 font-bold flex items-center gap-1">
-                <Lock className="size-3 text-amber-400" />
-                <span>Membre Simple</span>
-              </span>
-              <span className="text-[10px] bg-amber-500/20 text-amber-300 font-mono font-bold px-1.5 py-0.5 rounded">
-                Sans offre
-              </span>
-            </div>
-            <p className="text-[10px] text-zinc-400 leading-tight">
-              Accès gratuit : Accueil et Assistance. Offres verrouillées.
-            </p>
-            <button
-              onClick={() => {
-                setActiveTab("accueil");
-                setCompanyTab("produits");
-                if (isMobile) setIsMobileSidebarOpen(false);
-              }}
-              className="w-full py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-black text-[11px] font-bold transition-all cursor-pointer text-center"
-            >
-              Débloquer une offre
             </button>
           </div>
         )}
@@ -1830,102 +1767,16 @@ export const EnterpriseMemberView: React.FC<EnterpriseMemberViewProps> = ({
               
               {/* VUE CONTENU : ONGLET ACCUEIL (Flux de publications ou d'actualités épuré) */}
               {companyTab === "accueil" && (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-in fade-in duration-150">
-                  
-                  {/* Flux principal de publications / actualités (8 cols sur grand écran) */}
-                  <div className="lg:col-span-8 space-y-6">
-
-                    {/* Écosystème & Avantages de l'entreprise */}
-                    <div className="rounded-2xl border border-white/[0.09] bg-[#111318] p-5 sm:p-6 space-y-5 shadow-xl shadow-black/40">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/5">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Layers className="size-4 text-blue-400" />
-                            <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
-                              Écosystème & Avantages de l'entreprise
-                            </h3>
-                          </div>
-                          <p className="text-xs text-zinc-400">
-                            Découvrez l'ensemble des services proposés. Chaque fonctionnalité affiche son statut d'accès en temps réel selon vos droits réels de membre.
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-zinc-300">
-                            {ecosystemFeatures.filter((f) => f.isAccessible).length} / {ecosystemFeatures.length} accessibles
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Grille des fonctionnalités de l'écosystème */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        {ecosystemFeatures.map((feat) => (
-                          <div
-                            key={feat.id}
-                            onClick={() => handleEcosystemFeatureClick(feat)}
-                            className={`group relative p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
-                              feat.isAccessible
-                                ? "bg-[#151720] border-emerald-500/20 hover:border-emerald-500/50 hover:bg-[#181b26] shadow-sm shadow-emerald-500/5"
-                                : "bg-[#13141b] border-white/[0.06] hover:border-amber-500/30 hover:bg-[#161822]"
-                            }`}
-                          >
-                            <div className="space-y-2.5">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 group-hover:scale-105 transition-transform shrink-0">
-                                  {feat.icon}
-                                </div>
-
-                                {/* Badge d'accès : 🔓 Accessible vs 🔒 Verrouillé */}
-                                {feat.isAccessible ? (
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 shadow-sm">
-                                    <span>🔓 Accessible</span>
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zinc-800/90 text-zinc-300 border border-white/10 group-hover:border-amber-500/40 group-hover:text-amber-300 transition-colors">
-                                    <span>🔒 Verrouillé</span>
-                                  </span>
-                                )}
-                              </div>
-
-                              <div>
-                                <h4 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">
-                                  {feat.title}
-                                </h4>
-                                <p className="text-xs text-zinc-400 leading-relaxed mt-1 line-clamp-2">
-                                  {feat.description}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="pt-2.5 border-t border-white/5 flex items-center justify-between text-xs">
-                              <span className="text-[11px] text-zinc-400 truncate max-w-[140px]">
-                                {feat.productName}
-                              </span>
-                              <span
-                                className={`font-semibold flex items-center gap-1 transition-transform group-hover:translate-x-0.5 ${
-                                  feat.isAccessible
-                                    ? "text-emerald-400"
-                                    : "text-amber-400"
-                                }`}
-                              >
-                                <span>{feat.isAccessible ? "Accéder" : "Débloquer l'offre"}</span>
-                                <ChevronRight className="size-3" />
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                <div className="max-w-4xl space-y-6 animate-in fade-in duration-150">
+                  {/* Section Fil d'actualité & Publications */}
+                  <div id="company-newsfeed" className="pt-2">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                        Actualités & Publications officielles
+                      </h4>
+                      <span className="text-xs text-zinc-500">Mises à jour récentes</span>
                     </div>
-
-                    {/* Section Fil d'actualité & Publications */}
-                    <div id="company-newsfeed" className="pt-2">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                          Actualités & Publications officielles
-                        </h4>
-                        <span className="text-xs text-zinc-500">Mises à jour récentes</span>
-                      </div>
-                    </div>
+                  </div>
 
                     {/* Publication Épinglée */}
                     <div className="rounded-2xl border border-white/[0.09] bg-[#111318] p-5 sm:p-6 space-y-4 hover:border-white/15 transition-all shadow-lg shadow-black/40">
@@ -2231,128 +2082,6 @@ export const EnterpriseMemberView: React.FC<EnterpriseMemberViewProps> = ({
                         </button>
                       </div>
                     </div>
-
-                  </div>
-
-                  {/* Widgets d'accompagnement latéraux (4 cols sur grand écran) */}
-                  <div className="lg:col-span-4 space-y-5">
-                    
-                    {/* Widget 1 : Vos Accès Inclus */}
-                    <div className="rounded-2xl border border-white/[0.08] bg-[#111318] p-5 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                          Accès & Communautés
-                        </h4>
-                        <span className="size-2 rounded-full bg-emerald-400" />
-                      </div>
-
-                      <div className="space-y-2.5">
-                        {/* Fonctionnalités réelles de l'entreprise */}
-                        {ecosystemFeatures.map((feat) => (
-                          <div
-                            key={feat.id}
-                            onClick={() => handleEcosystemFeatureClick(feat)}
-                            className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between group ${
-                              feat.isAccessible
-                                ? "border-emerald-500/20 bg-[#161820] hover:border-emerald-500/40 hover:bg-[#181c28]"
-                                : "border-white/5 bg-[#14151c] hover:border-amber-500/30"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="size-9 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center shrink-0">
-                                {feat.icon}
-                              </div>
-                              <div>
-                                <div className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors flex items-center gap-1.5">
-                                  <span>{feat.title}</span>
-                                </div>
-                                <div className="text-[11px] text-zinc-400">
-                                  {feat.isAccessible ? "Accès membre actif" : "Offre requise"}
-                                </div>
-                              </div>
-                            </div>
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                                feat.isAccessible
-                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                                  : "bg-zinc-800 text-zinc-400 border-white/10"
-                              }`}
-                            >
-                              {feat.badgeLabel}
-                            </span>
-                          </div>
-                        ))}
-
-                        {/* Support Card (Toujours inclus pour les membres de l'entreprise) */}
-                        <div
-                          onClick={() => setActiveTab("support")}
-                          className="p-3.5 rounded-xl border border-emerald-500/20 bg-[#161820] hover:border-blue-500/40 transition-all cursor-pointer flex items-center justify-between group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="size-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
-                              <MessageSquare className="size-4" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">
-                                Assistance Membre
-                              </div>
-                              <div className="text-[11px] text-zinc-400">
-                                Inclus avec votre adhésion
-                              </div>
-                            </div>
-                          </div>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-                            🔓 Accessible
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Widget 2 : À propos & Règles de la communauté */}
-                    <div className="rounded-2xl border border-white/[0.08] bg-[#111318] p-5 space-y-3.5">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                        Règles de la communauté
-                      </h4>
-                      <ul className="space-y-2 text-xs text-zinc-400">
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 className="size-3.5 text-blue-400 shrink-0 mt-0.5" />
-                          <span>Confidentialité stricte des signaux et analyses partagés.</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 className="size-3.5 text-blue-400 shrink-0 mt-0.5" />
-                          <span>Échanges bienveillants et constructifs dans les lounges.</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 className="size-3.5 text-blue-400 shrink-0 mt-0.5" />
-                          <span>Support technique joignable 7j/7 via le chat dédié.</span>
-                        </li>
-                      </ul>
-                    </div>
-
-                    {/* Widget 3 : Statut de l'abonnement Membre */}
-                    <div className="rounded-2xl border border-white/[0.08] bg-[#111318] p-5 space-y-3">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-400">Statut de membre</span>
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-mono font-bold text-[10px]">
-                          {hasPaidOffer ? "Abonné Actif" : "Membre Simple"}
-                        </span>
-                      </div>
-                      <div className="text-sm font-bold text-white truncate">
-                        {currentSub.productName || subscription.productName}
-                      </div>
-                      <div className="text-xs text-zinc-400 font-mono">
-                        {currentSub.priceDisplay || subscription.priceDisplay}
-                      </div>
-                      <button
-                        onClick={() => setIsManageMembershipModalOpen(true)}
-                        className="w-full py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white text-xs font-semibold border border-white/5 transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-                      >
-                        <ShieldCheck className="size-3.5 text-indigo-400" />
-                        <span>Gérer l’adhésion</span>
-                      </button>
-                    </div>
-
-                  </div>
 
                 </div>
               )}
