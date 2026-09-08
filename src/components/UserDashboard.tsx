@@ -1359,19 +1359,6 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                     </span>
                   </button>
 
-                  {/* Boutique & Site Web */}
-                  <button
-                    onClick={() => switchTab("sites_web")}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                      activeNav === "sites_web"
-                        ? "bg-[#22252c] text-white font-semibold"
-                        : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
-                    }`}
-                  >
-                    <Globe className="size-4 text-zinc-300" />
-                    <span>{lang === "fr" ? "Boutique & Site Web" : "Store & Website"}</span>
-                  </button>
-
                   {/* Paiements */}
                   <button
                     onClick={() => switchTab("paiements")}
@@ -1812,19 +1799,6 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                         <span className="text-[10px] font-mono text-zinc-400 px-1.5 py-0.5 rounded bg-white/5">
                           {productsList.length}
                         </span>
-                      </button>
-
-                      {/* Boutique & Site Web */}
-                      <button
-                        onClick={() => switchTab("sites_web")}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors cursor-pointer min-h-[44px] ${
-                          activeNav === "sites_web"
-                            ? "bg-[#22252c] text-white font-semibold"
-                            : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
-                        }`}
-                      >
-                        <Globe className="size-4 text-zinc-300" />
-                        <span>{lang === "fr" ? "Boutique & Site Web" : "Store & Website"}</span>
                       </button>
 
                       <button
@@ -2894,19 +2868,6 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
             )
           )}
 
-          {/* VIEW: SITES WEB & BOUTIQUE */}
-          {activeNav === "sites_web" && (
-            isTabLoading ? (
-              <div className="max-w-7xl mx-auto space-y-5">
-                <DashboardProductsSkeleton />
-              </div>
-            ) : (
-              <WebsitesView
-                lang={lang}
-              />
-            )
-          )}
-
           {/* VIEW: PARAMÈTRES DU COMPTE */}
           {activeNav === "parametres_compte" && (
             isTabLoading ? (
@@ -3074,16 +3035,6 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
               </div>
               <div
                 onClick={() => {
-                  switchTab("sites_web");
-                  setIsSearchOpen(false);
-                }}
-                className="p-2 rounded-lg hover:bg-white/5 hover:text-white cursor-pointer flex items-center justify-between"
-              >
-                <span>Sites web & Boutique Mansa</span>
-                <span className="font-mono text-[10px] text-[#0055ff]">En ligne</span>
-              </div>
-              <div
-                onClick={() => {
                   switchTab("applications");
                   setIsSearchOpen(false);
                 }}
@@ -3169,6 +3120,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
       {/* PRODUCT CREATION STUDIO MODAL */}
       {isProductStudioOpen && (
         <ProductCreationStudio
+          companyName={activeCompany ? activeCompany.name : (companies[0]?.name || "Cadre financier")}
           initialData={editingProduct || undefined}
           activeCurrency={currency}
           onCurrencyChange={(newCurr) => {

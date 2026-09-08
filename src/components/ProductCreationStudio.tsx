@@ -43,6 +43,7 @@ import {
   getStoredTelegramChannels,
   TelegramChannelItem,
 } from "../utils/telegramStorage";
+import { getSavedCompanies } from "../utils/companyStorage";
 import {
   CurrencyCode,
   SUPPORTED_CURRENCIES,
@@ -133,6 +134,7 @@ interface ProductCreationStudioProps {
   lang?: "fr" | "en";
   activeCurrency?: CurrencyCode;
   onCurrencyChange?: (currency: CurrencyCode) => void;
+  companyName?: string;
 }
 
 const STOCK_PHOTOS = [
@@ -153,9 +155,18 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
   lang = "fr",
   activeCurrency,
   onCurrencyChange,
+  companyName,
 }) => {
   const handleSave = onSave || onSaveProduct || (() => {});
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  // Nom de l'entreprise créatrice (non modifiable)
+  const defaultSavedCompany = typeof window !== "undefined" ? getSavedCompanies()[0]?.name : "";
+  const effectiveCompanyName =
+    companyName ||
+    initialData?.storeName ||
+    defaultSavedCompany ||
+    "Cadre financier";
 
   // Synchronized currency: inherited from active dashboard selection, initialData or persisted stored currency
   const initialCurrency: CurrencyCode =
@@ -178,12 +189,12 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
   // Preview write / preview tab state for description editor
   const [descTab, setDescTab] = useState<"write" | "preview">("write");
 
-  // Single Synchronized Source of Truth for Product Name & Title
+  // Single Synchronized Source of Truth for Offer Name & Title
   const [productName, setProductName] = useState(
     initialData?.name ||
       initialData?.title ||
       (productType === "membership"
-        ? "Value Pickers – Accès Club VIP"
+        ? "Accès Club VIP Scalping"
         : productType === "digital"
         ? "Pack Templates & Ressources Digitales"
         : productType === "course"
@@ -191,15 +202,14 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
         : "E-book : Guide Ultime du Créateur")
   );
 
-  // Store/Brand Name
-  const [storeName, setStoreName] = useState(
-    initialData?.storeName ||
-      (productType === "membership"
-        ? "Value Pickers"
-        : productType === "ebook"
-        ? "Éditions du Savoir"
-        : "Mon Studio Créateur")
-  );
+  // Store/Enterprise Name (Locked to effective company name)
+  const [storeName, setStoreName] = useState(effectiveCompanyName);
+
+  useEffect(() => {
+    if (effectiveCompanyName) {
+      setStoreName(effectiveCompanyName);
+    }
+  }, [effectiveCompanyName]);
 
   // Product Description (fully synchronized between left form and right preview)
   const [productDescription, setProductDescription] = useState(
@@ -407,12 +417,12 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
 
   // 6 Official Valid Mansa Apps
   const VALID_MANSA_APPS = [
+    "Espace Membre",
     "Discord",
     "Telegram",
     "Téléchargement instantané",
     "Fichiers & Documents",
     "Lecteur E-book interactif",
-    "Espace Membre",
   ];
 
   // Helper to render official app icon
@@ -442,10 +452,14 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
     return apps.filter((a) => VALID_MANSA_APPS.includes(a));
   };
 
-  // Creator chooses apps themselves - NO preselection by default
-  const [selectedApps, setSelectedApps] = useState<string[]>(
-    initialData?.includedApps ? sanitizeApps(initialData.includedApps) : []
-  );
+  // "Espace Membre" doit toujours être pré-sélectionné
+  const [selectedApps, setSelectedApps] = useState<string[]>(() => {
+    const raw = initialData?.includedApps ? sanitizeApps(initialData.includedApps) : [];
+    if (!raw.includes("Espace Membre")) {
+      return ["Espace Membre", ...raw];
+    }
+    return raw;
+  });
 
   // CTA Text
   const [ctaButtonText, setCtaButtonText] = useState(
@@ -514,12 +528,12 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
   // Handle product category switch
   const handleSelectProductType = (type: ProductTypeCategory) => {
     setProductType(type);
-    // User explicitly selects apps themselves - do not preselect
+    // "Espace Membre" doit toujours être pré-sélectionné
+    setSelectedApps((prev) => (prev.includes("Espace Membre") ? prev : ["Espace Membre", ...prev]));
 
     if (type === "digital") {
-      const name = "Pack de Ressources & Templates";
+      const name = "Pack Templates & Ressources Digitales";
       setProductName(name);
-      setStoreName("Mon Studio Digital");
       setProductDescription(
         "Téléchargez immédiatement tous les fichiers sources, templates et outils numériques prêts à l'emploi dès la confirmation de votre commande."
       );
@@ -536,7 +550,6 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
     } else if (type === "course") {
       const name = "Masterclass Pro & Cursus Vidéo";
       setProductName(name);
-      setStoreName("Académie Pro");
       setProductDescription(
         "Accédez à l'ensemble des modules de cours vidéo, exercices pratiques et suivi de progression pas-à-pas."
       );
@@ -544,9 +557,8 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
       setCtaButtonText("Accéder à la formation");
       setDigitalFiles([]);
     } else if (type === "ebook") {
-      const name = "Guide Pratique & E-book";
+      const name = "E-book : Guide Pratique & Stratégies";
       setProductName(name);
-      setStoreName("Éditions du Savoir");
       setProductDescription(
         "Un livre numérique complet aux formats PDF et ePub optimisé pour liseuse (Kindle, Kobo), tablette, smartphone et ordinateur."
       );
@@ -569,9 +581,8 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
         },
       ]);
     } else if (type === "membership") {
-      const name = "Value Pickers – Accès Club VIP";
+      const name = "Accès Club VIP Scalping";
       setProductName(name);
-      setStoreName("Value Pickers");
       setProductDescription(
         "Rejoins le cercle privé : accès au Discord VIP + Telegram exclusif, analyses régulières, méthode concrète, et communauté active pour échanger et progresser ensemble."
       );
@@ -715,7 +726,7 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
       name: productName,
       title: productName,
       description: productDescription,
-      storeName: storeName || productName,
+      storeName: effectiveCompanyName,
       priceDisplay: formattedPrice,
       priceAmount: numericPrice,
       currency: currentCurrency,
@@ -723,7 +734,7 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
       billingCycle,
       visibility: storefrontVisible ? "Visible" : "Caché",
       discoverStatus: isListedOnDiscover ? "Répertorié sur Discover" : "Non répertorié",
-      includedApps: selectedApps,
+      includedApps: selectedApps.includes("Espace Membre") ? selectedApps : ["Espace Membre", ...selectedApps],
       conversionRate: "-",
       totalRevenue: `0 ${symbol}`,
       activeUsers: 0,
@@ -1026,11 +1037,40 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
                 </p>
               </div>
 
-              {/* Nom Field */}
+              {/* 1. Nom : Nom de l'entreprise dans laquelle est créé le produit (NON MODIFIABLE) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-zinc-300 flex items-center gap-1.5">
+                    <span>Nom</span>
+                    <span className="text-[10px] text-zinc-500 font-normal">({lang === "fr" ? "Entreprise" : "Company"})</span>
+                  </label>
+                  <span className="text-[10px] text-zinc-400 font-mono flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                    <Lock className="size-2.5 text-amber-400" />
+                    {lang === "fr" ? "Non modifiable" : "Read-only"}
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={effectiveCompanyName}
+                    readOnly
+                    disabled
+                    aria-readonly="true"
+                    className="w-full rounded-xl border border-white/10 bg-[#12141a] px-3.5 py-2.5 text-xs text-zinc-300 cursor-not-allowed outline-none select-none font-medium opacity-90"
+                    title={lang === "fr" ? "Nom de l'entreprise dans laquelle l'offre est créée (non modifiable)" : "Company name (non-editable)"}
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[10px] text-zinc-400 font-mono pointer-events-none">
+                    <ShieldCheck className="size-3.5 text-emerald-400" />
+                    <span>{lang === "fr" ? "Entreprise active" : "Active enterprise"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Nom de l'offre (anciennement Nom de la boutique / Marque) */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-semibold text-zinc-300">
-                    Nom <span className="text-[#00D26A]">*</span>
+                    {lang === "fr" ? "Nom de l'offre" : "Offer name"} <span className="text-[#00D26A]">*</span>
                   </label>
                   <span className="text-[10px] text-zinc-500 font-mono">{productName.length} / 80</span>
                 </div>
@@ -1039,23 +1079,9 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
                   maxLength={80}
-                  placeholder="ex. Value Pickers – Accès Club VIP"
+                  placeholder={lang === "fr" ? "ex. Accès Club VIP Scalping, Formation Pro..." : "e.g. VIP Scalping Club Access..."}
                   className="w-full rounded-xl border border-white/10 bg-[#16181f] px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-[#00D26A] transition-colors"
                   required
-                />
-              </div>
-
-              {/* Nom de la Marque / Boutique */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-zinc-300">
-                  Nom de la boutique / Marque
-                </label>
-                <input
-                  type="text"
-                  value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
-                  placeholder="ex. Value Pickers"
-                  className="w-full rounded-xl border border-white/10 bg-[#16181f] px-3.5 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-[#00D26A]"
                 />
               </div>
 
@@ -1798,19 +1824,18 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
           {viewMode === "mobile" && (
             <div className="w-full max-w-[420px] rounded-[36px] border-[6px] border-[#1f2128] bg-[#0c0d10] p-4 sm:p-5 shadow-2xl space-y-5 my-2 sm:my-4 shrink-0">
               
-              {/* Top store bar: icon + Store Name + Paramètres */}
+              {/* Top enterprise bar: icon + Enterprise Name + Paramètres */}
               <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
                 <div className="flex items-center gap-2">
                   <div className="size-7 rounded-lg bg-[#00D26A]/20 text-[#00D26A] flex items-center justify-center font-bold text-xs border border-[#00D26A]/30">
                     {productType === "ebook" ? "📖" : productType === "membership" ? "👑" : "📈"}
                   </div>
-                  <input
-                    type="text"
-                    value={storeName}
-                    onChange={(e) => setStoreName(e.target.value)}
-                    className="bg-transparent font-bold text-white text-sm outline-none w-36 hover:underline cursor-text"
-                    title="Cliquer pour modifier le nom de boutique"
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-white text-sm" title="Entreprise créatrice (non modifiable)">
+                      {effectiveCompanyName}
+                    </span>
+                    <ShieldCheck className="size-3 text-[#00D26A]" title="Entreprise active vérifiée" />
+                  </div>
                 </div>
 
                 <button
@@ -1882,15 +1907,15 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
                 )}
               </div>
 
-              {/* Product Title (Directly Editable & Synced with left form!) */}
+              {/* Offer Title (Directly Editable & Synced with left form!) */}
               <div className="space-y-1">
                 <input
                   type="text"
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
-                  placeholder="Écrire un titre..."
+                  placeholder="Nom de l'offre..."
                   className="w-full bg-transparent text-lg sm:text-xl font-black text-white outline-none border-b border-transparent focus:border-[#00D26A] pb-1 hover:border-white/20 transition-colors"
-                  title="Modifier le nom et titre du produit"
+                  title="Modifier le nom de l'offre"
                 />
 
                 {/* Price Display */}
@@ -2108,8 +2133,11 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
                     {productType === "ebook" ? "📖" : productType === "membership" ? "👑" : "📈"}
                   </div>
                   <div>
-                    <span className="text-sm font-bold text-white block">{storeName}</span>
-                    <span className="text-[10px] text-zinc-400 font-mono">Boutique officielle vérifiée</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-bold text-white block">{effectiveCompanyName}</span>
+                      <ShieldCheck className="size-3.5 text-[#00D26A]" />
+                    </div>
+                    <span className="text-[10px] text-zinc-400 font-mono">Entreprise officielle vérifiée</span>
                   </div>
                 </div>
 
