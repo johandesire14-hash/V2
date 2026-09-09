@@ -7,6 +7,7 @@ import {
   KycVerificationInfo,
 } from "../types";
 import { FirestoreTransaction } from "../services/dbService";
+import { db, doc, setDoc } from "../services/firebase";
 
 const STORAGE_PAYOUT_METHODS_PREFIX = "mansa_payout_methods_";
 const STORAGE_WITHDRAWALS_PREFIX = "mansa_withdrawals_";
@@ -383,6 +384,26 @@ export function createWithdrawalRequest(params: {
     localStorage.setItem(`${STORAGE_WITHDRAWALS_PREFIX}${creatorId}`, JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent(FINANCIAL_EVENTS.WITHDRAWAL_CREATED, { detail: newRequest }));
     window.dispatchEvent(new CustomEvent(FINANCIAL_EVENTS.BALANCE_CHANGED));
+
+    // 1. Synchronisation backend sécurisée côté serveur (Section 5 & 7)
+    if (typeof fetch !== "undefined") {
+      fetch("/api/financial/request-withdrawal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          creatorId,
+          amount,
+          currency,
+          payoutMethod: method,
+        }),
+      }).catch((err) => console.warn("Notice: Server financial sync:", err));
+    }
+
+    // 2. Persistance Firestore sécurisée (règles withdrawals)
+    try {
+      const docRef = doc(db, "withdrawals", newRequest.id);
+      setDoc(docRef, newRequest).catch((e) => console.warn("Notice: Firestore withdrawal sync:", e));
+    } catch (e) {}
 
     // Simulation de validation automatique sous 12 secondes
     setTimeout(() => {

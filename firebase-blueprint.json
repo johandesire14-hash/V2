@@ -7,15 +7,50 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "uid": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
+        "avatarInitials": { "type": "string" },
         "photoURL": { "type": "string" },
         "country": { "type": "string" },
         "currency": { "type": "string" },
+        "handle": { "type": "string" },
+        "bio": { "type": "string" },
+        "storeName": { "type": "string" },
+        "storeTagline": { "type": "string" },
+        "supportEmail": { "type": "string" },
+        "payoutMethod": { "type": "string" },
+        "momoNumber": { "type": "string" },
+        "momoName": { "type": "string" },
+        "bankName": { "type": "string" },
+        "bankIbanRib": { "type": "string" },
+        "bankAccountHolder": { "type": "string" },
         "createdAt": { "type": "string" },
         "updatedAt": { "type": "string" }
       },
       "required": ["email"]
+    },
+    "companies": {
+      "title": "Companies",
+      "description": "Creator enterprises and business workspaces. Only the creator owner can update or delete their company.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "creatorEmail": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "companyBanner": { "type": "string" },
+        "companyLogo": { "type": "string" },
+        "logoInitials": { "type": "string" },
+        "colorGradient": { "type": "string" },
+        "primaryCurrency": { "type": "string" },
+        "acceptedPayments": { "type": "array", "items": { "type": "string" } },
+        "supportEmail": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["ownerId", "name"]
     },
     "products": {
       "title": "Products",
@@ -26,6 +61,7 @@
         "creatorId": { "type": "string" },
         "creatorEmail": { "type": "string" },
         "creatorName": { "type": "string" },
+        "companyId": { "type": "string" },
         "name": { "type": "string" },
         "tagline": { "type": "string" },
         "description": { "type": "string" },
@@ -44,6 +80,7 @@
         "conversionRate": { "type": "string" },
         "apps": { "type": "array", "items": { "type": "string" } },
         "storeUrl": { "type": "string" },
+        "coverImage": { "type": "string" },
         "createdAt": { "type": "string" },
         "updatedAt": { "type": "string" }
       },
@@ -66,6 +103,8 @@
         "currency": { "type": "string" },
         "paymentMethod": { "type": "string" },
         "status": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
         "createdAt": { "type": "string" }
       },
       "required": ["creatorId", "amount", "productName"]
@@ -80,31 +119,61 @@
         "name": { "type": "string" },
         "email": { "type": "string" },
         "country": { "type": "string" },
+        "countryName": { "type": "string" },
+        "countryFlag": { "type": "string" },
         "phone": { "type": "string" },
         "productName": { "type": "string" },
         "productId": { "type": "string" },
         "amountSpent": { "type": "string" },
+        "totalSpent": { "type": "number" },
+        "totalSpentFormatted": { "type": "string" },
         "currency": { "type": "string" },
         "status": { "type": "string" },
-        "joinedAt": { "type": "string" }
+        "joinedAt": { "type": "string" },
+        "joinedDate": { "type": "string" },
+        "discordUsername": { "type": "string" }
       },
       "required": ["creatorId", "name", "email"]
     },
-    "community_messages": {
-      "title": "Community Messages",
-      "description": "Direct communication between buyers and creator",
+    "workforce": {
+      "title": "Workforce",
+      "description": "Creator team members, moderators and assistants",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "creatorId": { "type": "string" },
-        "buyerName": { "type": "string" },
-        "buyerEmail": { "type": "string" },
-        "productName": { "type": "string" },
-        "text": { "type": "string" },
-        "sender": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "rate": { "type": "string" },
+        "avatar": { "type": "string" },
+        "status": { "type": "string" },
+        "tasksCompleted": { "type": "number" },
+        "rating": { "type": "number" },
         "createdAt": { "type": "string" }
       },
-      "required": ["creatorId", "text"]
+      "required": ["creatorId", "name", "role"]
+    },
+    "partners": {
+      "title": "Partners",
+      "description": "B2B partnerships, co-branding deals, and tech integrations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "partnerName": { "type": "string" },
+        "partnerLogo": { "type": "string" },
+        "partnerHandle": { "type": "string" },
+        "type": { "type": "string" },
+        "typeLabel": { "type": "string" },
+        "description": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "status": { "type": "string" },
+        "value": { "type": "string" },
+        "reach": { "type": "string" },
+        "startDate": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["creatorId", "partnerName", "type"]
     },
     "favorites": {
       "title": "Favorites",
@@ -131,25 +200,96 @@
       },
       "required": ["userId", "productId", "title"]
     },
-    "companies": {
-      "title": "Companies",
-      "description": "Creator enterprises and business workspaces. Only the creator owner can update or delete their company.",
+    "community_messages": {
+      "title": "Community Messages",
+      "description": "Direct communication between buyers and creator",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "ownerId": { "type": "string" },
-        "creatorEmail": { "type": "string" },
-        "name": { "type": "string" },
-        "description": { "type": "string" },
-        "companyBanner": { "type": "string" },
-        "companyLogo": { "type": "string" },
-        "primaryCurrency": { "type": "string" },
-        "acceptedPayments": { "type": "array", "items": { "type": "string" } },
-        "supportEmail": { "type": "string" },
-        "createdAt": { "type": "string" },
-        "updatedAt": { "type": "string" }
+        "creatorId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "buyerEmail": { "type": "string" },
+        "productName": { "type": "string" },
+        "text": { "type": "string" },
+        "sender": { "type": "string" },
+        "createdAt": { "type": "string" }
       },
-      "required": ["ownerId", "name"]
+      "required": ["creatorId", "text"]
+    },
+    "withdrawals": {
+      "title": "Withdrawals",
+      "description": "Creator withdrawal and payout requests",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "fee": { "type": "number" },
+        "netAmount": { "type": "number" },
+        "payoutMethodId": { "type": "string" },
+        "payoutMethodType": { "type": "string" },
+        "payoutMethodLabel": { "type": "string" },
+        "destinationDetails": { "type": "string" },
+        "accountHolder": { "type": "string" },
+        "status": { "type": "string" },
+        "requestedAt": { "type": "string" },
+        "processedAt": { "type": "string" },
+        "referenceNumber": { "type": "string" }
+      },
+      "required": ["creatorId", "amount", "status"]
+    },
+    "subscriptions": {
+      "title": "Subscriptions",
+      "description": "Active user memberships, unlocked company offers, and purchased access",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "companyId": { "type": "string" },
+        "companyName": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "status": { "type": "string" },
+        "priceDisplay": { "type": "string" },
+        "unlockedProductIds": { "type": "array", "items": { "type": "string" } },
+        "hasPaidOffer": { "type": "boolean" },
+        "subscribedAt": { "type": "string" },
+        "expiresAt": { "type": "string" }
+      },
+      "required": ["userId", "companyId", "status"]
+    },
+    "reports": {
+      "title": "Reports",
+      "description": "Safety, fraud and compliance reports submitted by users or visitors",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reporterId": { "type": "string" },
+        "companyId": { "type": "string" },
+        "companyName": { "type": "string" },
+        "reason": { "type": "string" },
+        "details": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["companyName", "reason"]
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "In-app notifications for sales, subscriptions, and system alerts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "title", "message"]
     }
   }
 }

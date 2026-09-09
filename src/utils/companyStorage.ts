@@ -1,4 +1,5 @@
 import { Company } from "../types";
+import { db, doc, setDoc, deleteDoc } from "../services/firebase";
 
 const COMPANIES_STORAGE_PREFIX = "mansa_companies_";
 const LEGACY_COMPANIES_STORAGE_PREFIX = "afhub_companies_";
@@ -128,6 +129,14 @@ export function saveCompany(userKey: string = "default", newCompany: Omit<Compan
   } catch (err) {
     console.error("Error saving company to storage:", err);
   }
+
+  // Synchronisation sécurisée dans Firestore
+  try {
+    setDoc(doc(db, "companies", fullCompany.id), fullCompany).catch((err) =>
+      console.warn("Notice: Firestore company save:", err)
+    );
+  } catch (e) {}
+
   return { companies: updated, created: fullCompany };
 }
 
@@ -140,6 +149,15 @@ export function updateCompany(userKey: string = "default", updatedCompany: Compa
   } catch (err) {
     console.error("Error updating company in storage:", err);
   }
+
+  // Synchronisation sécurisée dans Firestore
+  try {
+    setDoc(doc(db, "companies", updatedCompany.id), {
+      ...updatedCompany,
+      updatedAt: new Date().toISOString(),
+    }).catch((err) => console.warn("Notice: Firestore company update:", err));
+  } catch (e) {}
+
   return updated;
 }
 
@@ -186,5 +204,13 @@ export function deleteCompany(userKey: string = "default", companyId: string): C
   } catch (err) {
     console.error("Error deleting company from storage:", err);
   }
+
+  // Suppression synchronisée dans Firestore
+  try {
+    deleteDoc(doc(db, "companies", companyId)).catch((err) =>
+      console.warn("Notice: Firestore company delete:", err)
+    );
+  } catch (e) {}
+
   return updated;
 }

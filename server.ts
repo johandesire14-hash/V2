@@ -978,6 +978,183 @@ app.post("/api/resources/request-access", (req, res) => {
   });
 });
 
+// ==========================================
+// 💰 CONTRÔLE FINANCIER & RETRAITS CÔTÉ SERVEUR (Section 5 & 7)
+// ==========================================
+
+interface ServerWithdrawal {
+  id: string;
+  creatorId: string;
+  amount: number;
+  currency: string;
+  fee: number;
+  netAmount: number;
+  payoutMethodId: string;
+  payoutMethodType: string;
+  payoutMethodLabel: string;
+  destinationDetails: string;
+  accountHolder: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  requestedAt: string;
+  processedAt?: string;
+  referenceNumber: string;
+}
+
+const serverWithdrawalsDb: ServerWithdrawal[] = [
+  {
+    id: "wdr-demo-01",
+    creatorId: "creator-default",
+    amount: 250000,
+    currency: "FCFA",
+    fee: 0,
+    netAmount: 250000,
+    payoutMethodId: "pm-default-wave",
+    payoutMethodType: "wave",
+    payoutMethodLabel: "Wave CI (+225 07 88 99 00 11)",
+    destinationDetails: "Wave Côte d'Ivoire · Compte Johan Désiré",
+    accountHolder: "Johan Désiré",
+    status: "completed",
+    requestedAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
+    processedAt: new Date(Date.now() - 5 * 24 * 3600 * 1000 + 45 * 60 * 1000).toISOString(),
+    referenceNumber: "WDR-2026-WV882104",
+  },
+  {
+    id: "wdr-demo-02",
+    creatorId: "creator-default",
+    amount: 120000,
+    currency: "FCFA",
+    fee: 0,
+    netAmount: 120000,
+    payoutMethodId: "pm-default-wave",
+    payoutMethodType: "wave",
+    payoutMethodLabel: "Wave CI (+225 07 88 99 00 11)",
+    destinationDetails: "Wave Côte d'Ivoire · Compte Johan Désiré",
+    accountHolder: "Johan Désiré",
+    status: "completed",
+    requestedAt: new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString(),
+    processedAt: new Date(Date.now() - 14 * 24 * 3600 * 1000 + 15 * 60 * 1000).toISOString(),
+    referenceNumber: "WDR-2026-WV451093",
+  },
+];
+
+// Récupérer l'historique des retraits contrôlé par le serveur
+app.get("/api/financial/withdrawals/:creatorId", (req, res) => {
+  const { creatorId } = req.params;
+  const list = serverWithdrawalsDb.filter(
+    (w) => w.creatorId === creatorId || (creatorId.includes("@") && w.creatorId === "creator-default")
+  );
+  return res.json({
+    success: true,
+    withdrawals: list,
+  });
+});
+
+// Traitement sécurisé d'une demande de retrait avec validation des seuils
+app.post("/api/financial/request-withdrawal", (req, res) => {
+  const { creatorId, amount, currency = "FCFA", payoutMethod } = req.body;
+
+  if (!creatorId || !amount || typeof amount !== "number" || amount <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Montant de retrait invalide ou créateur non spécifié.",
+    });
+  }
+
+  const minThreshold = currency === "EUR" ? 10 : 5000;
+  if (amount < minThreshold) {
+    return res.status(400).json({
+      success: false,
+      error: `Le montant minimum de retrait est de ${minThreshold.toLocaleString("fr-FR")} ${currency}.`,
+    });
+  }
+
+  if (!payoutMethod || !payoutMethod.accountIdentifier) {
+    return res.status(400).json({
+      success: false,
+      error: "Méthode de paiement incomplète. Veuillez configurer vos coordonnées de retrait.",
+    });
+  }
+
+  const refNumber = `WDR-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  const newWithdrawal: ServerWithdrawal = {
+    id: `wdr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    creatorId,
+    amount,
+    currency,
+    fee: 0,
+    netAmount: amount,
+    payoutMethodId: payoutMethod.id || "pm-default",
+    payoutMethodType: payoutMethod.type || "wave",
+    payoutMethodLabel: payoutMethod.label || `${payoutMethod.type} (${payoutMethod.accountIdentifier})`,
+    destinationDetails: `${payoutMethod.label || payoutMethod.type} · ${payoutMethod.accountHolder || "Bénéficiaire"} · ${payoutMethod.accountIdentifier}`,
+    accountHolder: payoutMethod.accountHolder || "Créateur Mansa",
+    status: "processing",
+    requestedAt: new Date().toISOString(),
+    referenceNumber: refNumber,
+  };
+
+  serverWithdrawalsDb.unshift(newWithdrawal);
+
+  // Auto-validation du virement sous 15 secondes pour fluidité
+  setTimeout(() => {
+    newWithdrawal.status = "completed";
+    newWithdrawal.processedAt = new Date().toISOString();
+  }, 15000);
+
+  return res.status(200).json({
+    success: true,
+    message: "Demande de retrait enregistrée et transmise pour exécution.",
+    withdrawal: newWithdrawal,
+  });
+});
+
+// ==========================================
+// 🚩 SIGNALEMENT ET CONFORMITÉ (REPORTS)
+// ==========================================
+
+interface ServerReport {
+  id: string;
+  companyId?: string;
+  companyName: string;
+  reason: string;
+  details?: string;
+  reporterEmail?: string;
+  status: "pending" | "reviewed" | "dismissed";
+  createdAt: string;
+}
+
+const serverReportsDb: ServerReport[] = [];
+
+app.post("/api/reports/submit", (req, res) => {
+  const { companyId, companyName, reason, details, reporterEmail } = req.body;
+
+  if (!companyName || !reason) {
+    return res.status(400).json({
+      success: false,
+      error: "Le nom de l'entreprise et le motif du signalement sont obligatoires.",
+    });
+  }
+
+  const newReport: ServerReport = {
+    id: `rep-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    companyId,
+    companyName,
+    reason,
+    details: details || "",
+    reporterEmail,
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  };
+
+  serverReportsDb.unshift(newReport);
+
+  return res.status(200).json({
+    success: true,
+    message: "Signalement enregistré avec succès par l'équipe de conformité Mansa.",
+    reportId: newReport.id,
+  });
+});
+
 // Vite & Static file handling
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

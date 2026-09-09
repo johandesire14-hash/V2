@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { X, Flag, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useModalDismiss } from "../../hooks/useModalDismiss";
+import { db, collection, addDoc } from "../../services/firebase";
 
 interface ReportEnterpriseModalProps {
   isOpen: boolean;
@@ -38,6 +39,31 @@ export const ReportEnterpriseModal: React.FC<ReportEnterpriseModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+
+    const reportPayload = {
+      companyName,
+      reason: selectedReason,
+      details: details.trim(),
+      createdAt: new Date().toISOString(),
+      status: "pending",
+    };
+
+    // 1. Enregistrement direct dans Firestore (sécurisé par les règles reports)
+    try {
+      addDoc(collection(db, "reports"), reportPayload).catch((err) =>
+        console.warn("Notice: Firestore report write:", err)
+      );
+    } catch (e) {}
+
+    // 2. Enregistrement serveur
+    if (typeof fetch !== "undefined") {
+      fetch("/api/reports/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reportPayload),
+      }).catch((err) => console.warn("Notice: Server report submit:", err));
+    }
+
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSubmitted(true);
