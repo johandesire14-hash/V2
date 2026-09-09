@@ -18,15 +18,13 @@ export const Footer: React.FC<FooterProps> = ({ onOpenStudio, onOpenAiBuilder, l
       <div className="border-b border-white/[0.04] bg-gradient-to-b from-[#0c0d12] via-[#07080b] to-[#07080b] py-20 px-6 sm:px-10">
         <div className="mx-auto max-w-[900px] text-center space-y-6">
           <span className="text-xs font-bold uppercase tracking-wider text-[#00D26A] block">
-            {lang === "fr" ? "L'opportunité du numérique en Afrique & Diaspora" : "Bet On Yourself"}
+            L'opportunité du numérique en Afrique & Diaspora
           </span>
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight">
-            {lang === "fr" ? "Misez sur vous-même." : "Bet on yourself."}
+            Misez sur vous-même.
           </h2>
           <p className="text-base text-zinc-400 max-w-xl mx-auto font-normal leading-relaxed">
-            {lang === "fr"
-              ? "Rejoignez des milliers de créateurs, formateurs et entrepreneurs qui monétisent leurs savoirs et leurs communautés en Afrique et dans le monde."
-              : "Join thousands of creators and communities growing and monetizing their digital businesses."}
+            Rejoignez des milliers de créateurs, formateurs et entrepreneurs qui monétisent leurs savoirs et leurs communautés en Afrique et dans le monde.
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -34,7 +32,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenStudio, onOpenAiBuilder, l
               onClick={() => handleOpen()}
               className="mansa-btn-green px-10 py-4 text-base cursor-pointer font-bold text-black flex items-center gap-2"
             >
-              <span>{lang === "fr" ? "Lancer ma boutique maintenant" : "Get started"}</span>
+              <span>Lancer ma boutique maintenant</span>
               <ArrowRight className="size-4" />
             </button>
           </div>

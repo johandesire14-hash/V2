@@ -15,9 +15,9 @@ export const EmbedComponentsStudio: React.FC<EmbedComponentsStudioProps> = ({ la
   const TABS: EmbedComponentTab[] = [
     {
       id: "checkout",
-      name: lang === "fr" ? "Mansa Checkout" : "Mansa Checkout",
-      badge: "High Conversion",
-      description: lang === "fr" ? "Tunnel de paiement ultra-rapide avec Apple Pay, Google Pay, Cartes & Crypto." : "Sub-second checkout embedded anywhere with Apple Pay, Cards & Crypto.",
+      name: "Mansa Checkout",
+      badge: "Haute Conversion",
+      description: "Tunnel de paiement ultra-rapide avec Apple Pay, Google Pay, Cartes & Crypto.",
       codeSnippet: `import { MansaCheckout } from "@mansa/sdk-react";
 
 export function PurchaseButton() {
@@ -34,9 +34,9 @@ export function PurchaseButton() {
     },
     {
       id: "wallet",
-      name: lang === "fr" ? "Creator Wallet" : "Creator Wallet",
-      badge: "Instant Payouts",
-      description: lang === "fr" ? "Retraits automatiques vers compte bancaire, Stripe, PayPal ou USDC." : "Automated daily payouts to Bank accounts, Stripe, PayPal or USDC.",
+      name: "Portefeuille Créateur",
+      badge: "Paiements Instantanés",
+      description: "Retraits automatiques vers compte bancaire, Stripe, PayPal ou USDC.",
       codeSnippet: `import { MansaWallet } from "@mansa/sdk-react";
 
 export function PayoutHub() {
@@ -51,9 +51,9 @@ export function PayoutHub() {
     },
     {
       id: "chat",
-      name: lang === "fr" ? "Embedded Chat" : "Embedded Chat",
-      badge: "Real-time",
-      description: lang === "fr" ? "Messagerie privée et salons de discussion directement dans votre interface." : "Private direct messages and subscriber-only chat rooms.",
+      name: "Chat Intégré",
+      badge: "Temps Réel",
+      description: "Messagerie privée et salons de discussion directement dans votre interface.",
       codeSnippet: `import { MansaChatRoom } from "@mansa/sdk-react";
 
 export function CommunityFeed() {
@@ -67,9 +67,9 @@ export function CommunityFeed() {
     },
     {
       id: "licenses",
-      name: lang === "fr" ? "License Keys" : "License Keys",
-      badge: "Hardware Lock",
-      description: lang === "fr" ? "Validation et activation de licences pour logiciels, scripts Python & bots." : "Hardware-locked cryptographic key validation for software & tools.",
+      name: "Clés de Licence",
+      badge: "Verrouillage Matériel",
+      description: "Validation et activation de licences pour logiciels, scripts Python & bots.",
       codeSnippet: `// Server-side activation check (Express / Next.js)
 import { Mansa } from "@mansa/sdk";
 
@@ -108,15 +108,13 @@ export async function validateLicense(key: string) {
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto pb-12">
           <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#FA4616] block mb-2">
-            Mansa SDK & Components
+            Mansa SDK & Composants
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            {lang === "fr" ? "Intégrez Mansa dans votre propre site" : "Embed Mansa components everywhere"}
+            Intégrez Mansa dans votre propre site
           </h2>
           <p className="mt-3 text-sm text-zinc-400 font-light">
-            {lang === "fr"
-              ? "Installez nos composants React ou SDK Mansa en 2 lignes de code et commencez à encaisser."
-              : "Drop plug-and-play UI widgets or integrate Mansa webhooks with instant token authorization."}
+            Installez nos composants React ou le SDK Mansa en 2 lignes de code et commencez à encaisser.
           </p>
         </div>
 
@@ -186,7 +184,7 @@ export async function validateLicense(key: string) {
           <div className="lg:col-span-6 flex flex-col justify-center rounded-2xl border border-white/10 bg-[#101114] p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
               <span className="text-xs font-mono uppercase text-[#FA4616] font-bold">
-                {lang === "fr" ? "Aperçu en direct du widget" : "Live interactive widget preview"}
+                Aperçu en direct du widget
               </span>
               <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
                 <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />

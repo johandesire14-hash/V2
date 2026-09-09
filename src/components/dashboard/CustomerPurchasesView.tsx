@@ -289,12 +289,10 @@ export const CustomerPurchasesView: React.FC<CustomerPurchasesViewProps> = ({
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-bold text-white">
-              {lang === "fr" ? "Aucune commande enregistrée" : "No orders recorded"}
+              Aucune commande enregistrée
             </h3>
             <p className="text-xs text-zinc-500 max-w-md mx-auto">
-              {lang === "fr"
-                ? "Vous n'avez pas encore passé de commande (adhésion, e-book, musique ou formation). Vos accès et factures apparaîtront ici."
-                : "You haven't placed any order yet. Your access keys, audio files, and invoices will appear here."}
+              Vous n'avez pas encore passé de commande (adhésion, e-book, musique ou formation). Vos accès et factures apparaîtront ici.
             </p>
           </div>
         </div>
@@ -306,7 +304,7 @@ export const CustomerPurchasesView: React.FC<CustomerPurchasesViewProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm sm:text-base font-bold text-white">
-                    {lang === "fr" ? "Mes Commandes & Achats" : "My Orders & Purchases"}
+                    Mes Commandes & Achats
                   </h3>
                   <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                     {purchases.length} Commandes

@@ -85,7 +85,7 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
               ? "border-[#00D26A] bg-[#00D26A]/10 text-[#00D26A]"
               : "border-white/10 bg-[#121318] text-zinc-200 hover:border-white/20 hover:bg-[#181a22]"
           }`}
-          title={lang === "fr" ? "Changer votre pays ou devise d'affichage" : "Change country or display currency"}
+          title="Changer votre pays ou devise d'affichage"
         >
           <CountryFlag countryCode={displayCountryCode} className="w-4 h-3 rounded-[2px] object-cover shrink-0 shadow-xs" />
           <span className="font-mono font-bold text-xs">{activeConfig.code}</span>
@@ -130,7 +130,7 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
           <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
             <div className="flex items-center gap-1.5 text-xs font-bold text-white">
               <Globe className="size-3.5 text-[#00D26A]" />
-              <span>{lang === "fr" ? "Pays & Devise de paiement" : "Country & Currency"}</span>
+              <span>Pays & Devise de paiement</span>
             </div>
             <span className="text-[10px] font-mono text-zinc-400 flex items-center gap-1">
               <Sparkles className="size-2.5 text-[#00D26A]" />
@@ -145,11 +145,7 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
               type="text"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder={
-                lang === "fr"
-                  ? "Écrivez votre pays (Sénégal, Congo, Bénin...) ou devise..."
-                  : "Type country (Senegal, Congo, Rwanda...) or currency..."
-              }
+              placeholder="Écrivez votre pays (Sénégal, Congo, Bénin...) ou devise..."
               className="w-full rounded-xl border border-white/10 bg-[#1a1c24] pl-8 pr-3 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-[#00D26A] transition-all"
               autoFocus
             />
@@ -168,7 +164,7 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
           {!searchFilter && (
             <div className="space-y-1.5">
               <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
-                {lang === "fr" ? "Accès rapide par pays :" : "Quick pick by country:"}
+                Accès rapide par pays :
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {SUPPORTED_COUNTRIES.filter((c) => QUICK_COUNTRIES.includes(c.code)).map((qc) => {
@@ -198,12 +194,8 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
           <div className="max-h-64 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
             <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider px-1 pb-1">
               {searchFilter
-                ? lang === "fr"
-                  ? `Résultats pour "${searchFilter}" :`
-                  : `Results for "${searchFilter}":`
-                : lang === "fr"
-                ? "Tous les pays & devises :"
-                : "All countries & currencies:"}
+                ? `Résultats pour "${searchFilter}" :`
+                : "Tous les pays & devises :"}
             </div>
 
             {filteredCountryItems.map((country) => {
@@ -226,14 +218,14 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-bold text-xs text-white">
-                          {lang === "fr" ? country.nameFr : country.nameEn}
+                          {country.nameFr}
                         </span>
                         <span className="font-mono text-[11px] font-semibold text-[#00D26A] bg-[#00D26A]/10 px-1.5 py-0.2 rounded border border-[#00D26A]/20">
                           {country.currencyCode} ({country.symbol})
                         </span>
                       </div>
                       <div className="text-[11px] text-zinc-400 truncate">
-                        {lang === "fr" ? country.currencyNameFr : country.currencyNameEn}
+                        {country.currencyNameFr}
                       </div>
                     </div>
                   </div>
@@ -257,10 +249,10 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
             {filteredCountryItems.length === 0 && (
               <div className="py-6 text-center space-y-1">
                 <p className="text-xs text-zinc-400 font-medium">
-                  {lang === "fr" ? "Aucun pays ou devise trouvé pour cette recherche" : "No country or currency matched"}
+                  Aucun pays ou devise trouvé pour cette recherche
                 </p>
                 <p className="text-[11px] text-zinc-500">
-                  {lang === "fr" ? "Essayez d'écrire Sénégal, Congo, RDC, Bénin, Cameroun ou Rwanda" : "Try Senegal, Congo, Benin, Cameroon, or Rwanda"}
+                  Essayez d'écrire Sénégal, Congo, RDC, Bénin, Cameroun ou Rwanda
                 </p>
               </div>
             )}

@@ -58,7 +58,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setLocalError(lang === "fr" ? "Veuillez remplir tous les champs." : "Please fill in all fields.");
+      setLocalError("Veuillez remplir tous les champs.");
       return;
     }
 
@@ -89,7 +89,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         className="absolute top-6 left-6 sm:top-8 sm:left-10 flex items-center gap-2 text-xs font-semibold text-[#B6B5B0] hover:text-white transition-colors cursor-pointer"
       >
         <ArrowLeft className="size-4" />
-        <span>{lang === "fr" ? "Retour à l'accueil" : "Back to Home"}</span>
+        <span>Retour à l'accueil</span>
       </button>
 
       <div className="relative z-10 w-full max-w-[420px] space-y-6">
@@ -101,21 +101,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
           <h1 className="text-2xl font-bold tracking-tight text-white font-heading">
             {mode === "login"
-              ? lang === "fr"
-                ? "Connexion à Mansa"
-                : "Sign in to Mansa"
-              : lang === "fr"
-              ? "Créer votre compte Mansa"
-              : "Create your Mansa account"}
+              ? "Connexion à Mansa"
+              : "Créer votre compte Mansa"}
           </h1>
           <p className="mt-1 text-xs text-[#B6B5B0]">
             {mode === "login"
-              ? lang === "fr"
-                ? "Gérez vos produits digitaux et vos revenus Mobile Money en direct"
-                : "Manage your digital products and live payouts"
-              : lang === "fr"
-              ? "Rejoignez la communauté de créateurs et monétisez en quelques clics"
-              : "Join creators community and monetize easily"}
+              ? "Gérez vos produits digitaux et vos revenus Mobile Money en direct"
+              : "Rejoignez la communauté de créateurs et monétisez en quelques clics"}
           </p>
         </div>
 
@@ -133,7 +125,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 : "text-[#B6B5B0] hover:text-white"
             }`}
           >
-            {lang === "fr" ? "Se connecter" : "Sign In"}
+            Se connecter
           </button>
           <button
             type="button"
@@ -147,7 +139,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 : "text-[#B6B5B0] hover:text-white"
             }`}
           >
-            {lang === "fr" ? "Créer un compte" : "Create Account"}
+            Créer un compte
           </button>
         </div>
 
@@ -160,15 +152,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
               <div>
                 <h3 className="text-xs font-bold text-white">
-                  {lang === "fr" ? "Explorer en mode Démo (1-clic)" : "Explore in Demo mode (1-click)"}
+                  Explorer en mode Démo (1-clic)
                 </h3>
                 <p className="text-[11px] text-[#B6B5B0]">
-                  {lang === "fr" ? "Accès instantané complet pour tester & créer" : "Instant full access to test & create"}
+                  Accès instantané complet pour tester & créer
                 </p>
               </div>
             </div>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#3DDC84]/20 text-[#3DDC84] border border-[#3DDC84]/30">
-              {lang === "fr" ? "Gratuit" : "Free"}
+              Gratuit
             </span>
           </div>
           <button
@@ -177,7 +169,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             disabled={isSubmitting}
             className="mansa-btn-green w-full py-2.5 text-xs font-bold cursor-pointer flex items-center justify-center gap-2"
           >
-            <span>{lang === "fr" ? "Lancer la session Démo & Explorer" : "Launch Demo Session & Explore"}</span>
+            <span>Lancer la session Démo & Explorer</span>
             <ArrowRight className="size-3.5" />
           </button>
         </div>
@@ -185,7 +177,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         {/* Login Box */}
         <div className="rounded-2xl border border-white/10 bg-[#151515] p-6 sm:p-7 shadow-2xl space-y-4">
           <div className="text-[11px] font-bold uppercase tracking-wider text-[#B6B5B0] text-center">
-            {lang === "fr" ? "Ou connectez votre compte réel" : "Or connect your real account"}
+            Ou connectez votre compte réel
           </div>
 
           {/* Error notice */}
@@ -233,7 +225,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <div className="relative flex items-center justify-center py-1">
             <div className="w-full border-t border-white/10" />
             <span className="absolute bg-[#151515] px-3 text-[10px] font-mono uppercase text-[#B6B5B0]">
-              {lang === "fr" ? "ou par email et mot de passe" : "or with email"}
+              ou par email et mot de passe
             </span>
           </div>
 
@@ -242,7 +234,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             {mode === "signup" && (
               <div>
                 <label className="block text-[11px] font-semibold text-[#B6B5B0] uppercase tracking-wider mb-1">
-                  {lang === "fr" ? "Votre nom ou pseudo" : "Full Name / Pseudonym"}
+                  Votre nom ou pseudo
                 </label>
                 <div className="relative flex items-center">
                   <User className="absolute left-3.5 size-4 text-zinc-500" />
@@ -259,7 +251,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
             <div>
               <label className="block text-[11px] font-semibold text-[#B6B5B0] uppercase tracking-wider mb-1">
-                {lang === "fr" ? "Adresse email" : "Email address"}
+                Adresse email
               </label>
               <div className="relative flex items-center">
                 <Mail className="absolute left-3.5 size-4 text-zinc-500" />
@@ -277,11 +269,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-[11px] font-semibold text-[#B6B5B0] uppercase tracking-wider">
-                  {lang === "fr" ? "Mot de passe" : "Password"}
+                  Mot de passe
                 </label>
                 {mode === "login" && (
                   <span className="text-[10px] text-[#B6B5B0] hover:text-[#3DDC84] cursor-pointer">
-                    {lang === "fr" ? "Mot de passe oublié ?" : "Forgot password?"}
+                    Mot de passe oublié ?
                   </span>
                 )}
               </div>
@@ -306,18 +298,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
                   <span className="size-3.5 rounded-full border-2 border-black border-t-transparent animate-spin" />
-                  <span>{lang === "fr" ? "Chargement..." : "Processing..."}</span>
+                  <span>Chargement...</span>
                 </span>
               ) : (
                 <>
                   <span>
                     {mode === "login"
-                      ? lang === "fr"
-                        ? "Se connecter"
-                        : "Sign In"
-                      : lang === "fr"
-                      ? "Créer mon compte Mansa"
-                      : "Create My Account"}
+                      ? "Se connecter"
+                      : "Créer mon compte Mansa"}
                   </span>
                   <ArrowRight className="size-3.5" />
                 </>

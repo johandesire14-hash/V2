@@ -64,10 +64,10 @@ export const BuildNextCarousel: React.FC<BuildNextCarouselProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              {lang === "fr" ? "Que souhaitez-vous vendre ?" : "What do you want to sell?"}
+              Que souhaitez-vous vendre ?
             </h2>
             <p className="text-sm text-zinc-400 mt-1">
-              {lang === "fr" ? "Sélectionnez un type de produit pour configurer votre offre en 2 minutes." : "Choose a product type to get started in minutes."}
+              Sélectionnez un type de produit pour configurer votre offre en 2 minutes.
             </p>
           </div>
 
@@ -75,7 +75,7 @@ export const BuildNextCarousel: React.FC<BuildNextCarouselProps> = ({
             onClick={() => onOpenStudio()}
             className="text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
           >
-            <span>{lang === "fr" ? "Créer sur mesure" : "Custom setup"}</span>
+            <span>Créer sur mesure</span>
             <ArrowRight className="size-3.5" />
           </button>
         </div>
@@ -111,7 +111,7 @@ export const BuildNextCarousel: React.FC<BuildNextCarouselProps> = ({
                 </div>
 
                 <div className="mt-5 pt-3 border-t border-white/[0.04] flex items-center justify-between text-[11px] font-semibold text-zinc-500 group-hover:text-white transition-colors">
-                  <span>{lang === "fr" ? "Lancer ce modèle" : "Launch"}</span>
+                  <span>Lancer ce modèle</span>
                   <ArrowRight className="size-3 text-emerald-400 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>

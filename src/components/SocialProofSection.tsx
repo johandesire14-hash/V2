@@ -35,12 +35,10 @@ export const SocialProofSection: React.FC<SocialProofSectionProps> = ({
         {/* Header Section */}
         <div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            {lang === "fr" ? "Retours d'expérience créateurs" : "Creator Stories"}
+            Retours d'expérience créateurs
           </h2>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            {lang === "fr"
-              ? "Avis et retours vérifiés de la communauté afhub."
-              : "Verified reviews and insights from the afhub community."}
+            Avis et retours vérifiés de la communauté afhub.
           </p>
         </div>
 
@@ -50,12 +48,10 @@ export const SocialProofSection: React.FC<SocialProofSectionProps> = ({
             <MessageSquarePlus className="size-6" />
           </div>
           <h3 className="text-base font-bold text-white mb-1">
-            {lang === "fr" ? "Aucun avis publié pour l'instant" : "No testimonials submitted yet"}
+            Aucun avis publié pour l'instant
           </h3>
           <p className="text-xs text-zinc-400 max-w-md">
-            {lang === "fr"
-              ? "Les avis vérifiés laissés par vos acheteurs après avoir commandé apparaîtront automatiquement dans cette section."
-              : "Verified reviews from your customers and partners will be displayed here."}
+            Les avis vérifiés laissés par vos acheteurs après avoir commandé apparaîtront automatiquement dans cette section.
           </p>
         </div>
       </div>

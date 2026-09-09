@@ -58,12 +58,10 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
         {/* Header */}
         <div className="text-center space-y-2">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            {lang === "fr" ? "Questions fréquentes" : "Frequently Asked Questions"}
+            Questions fréquentes
           </h2>
           <p className="text-xs sm:text-sm text-zinc-400">
-            {lang === "fr"
-              ? "Tout ce que vous devez savoir pour lancer vos produits et encaisser sans friction."
-              : "Everything you need to know to get started."}
+            Tout ce que vous devez savoir pour lancer vos produits et encaisser sans friction.
           </p>
         </div>
 
@@ -115,7 +113,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
             onClick={() => onOpenStudio && onOpenStudio()}
             className="text-xs sm:text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
           >
-            <span>{lang === "fr" ? "Prêt à créer votre première boutique ?" : "Ready to create your storefront?"}</span>
+            <span>Prêt à créer votre première boutique ?</span>
             <ArrowRight className="size-4" />
           </button>
         </div>

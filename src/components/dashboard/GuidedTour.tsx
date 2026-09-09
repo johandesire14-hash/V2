@@ -511,12 +511,10 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
 
             <div className="space-y-2">
               <h3 className="text-xl font-bold text-white">
-                {lang === "fr" ? "Bienvenue sur Mansa" : "Welcome to Mansa"}
+                Bienvenue sur Mansa
               </h3>
               <p className="text-xs text-zinc-400 leading-relaxed max-w-sm mx-auto">
-                {lang === "fr"
-                  ? "Finalisez votre profil pour personnaliser votre espace créateur."
-                  : "Complete your profile to personalize your creator workspace."}
+                Finalisez votre profil pour personnaliser votre espace créateur.
               </p>
             </div>
 
@@ -525,7 +523,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <label className="space-y-1.5">
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                    {lang === "fr" ? "Prénom" : "First name"}
+                    Prénom
                   </span>
                   <input
                     type="text"
@@ -534,7 +532,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
                       setOnboardingError(null);
                       setOnboarding((current) => ({ ...current, firstName: event.target.value }));
                     }}
-                    placeholder={lang === "fr" ? "Johan" : "John"}
+                    placeholder="Johan"
                     autoComplete="given-name"
                     className="w-full rounded-xl border border-white/10 bg-[#0b0c0f] px-3 py-2.5 text-xs text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-[#00D26A]/70 focus:ring-1 focus:ring-[#00D26A]/30"
                   />
@@ -542,7 +540,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
 
                 <label className="space-y-1.5">
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                    {lang === "fr" ? "Nom" : "Last name"}
+                    Nom
                   </span>
                   <input
                     type="text"
@@ -551,7 +549,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
                       setOnboardingError(null);
                       setOnboarding((current) => ({ ...current, lastName: event.target.value }));
                     }}
-                    placeholder={lang === "fr" ? "Désiré" : "Doe"}
+                    placeholder="Désiré"
                     autoComplete="family-name"
                     className="w-full rounded-xl border border-white/10 bg-[#0b0c0f] px-3 py-2.5 text-xs text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-[#00D26A]/70 focus:ring-1 focus:ring-[#00D26A]/30"
                   />
@@ -560,7 +558,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
 
               <label className="space-y-1.5 block">
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                  {lang === "fr" ? "Devise principale" : "Primary currency"}
+                  Devise principale
                 </span>
                 <div className="relative">
                   <Coins className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#00D26A]" />
@@ -579,7 +577,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
                       const config = SUPPORTED_CURRENCIES[code];
                       return (
                         <option key={code} value={code} className="bg-[#141519]">
-                          {config.flag} {code} — {lang === "fr" ? config.nameFr.split(" - ")[0] : config.nameEn}
+                          {config.flag} {code} — {config.nameFr.split(" - ")[0]}
                         </option>
                       );
                     })}
@@ -601,7 +599,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-white/10 bg-[#1c1e24] hover:bg-[#252830] text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer"
               >
                 <RotateCcw className="size-3.5" />
-                <span>{lang === "fr" ? "Revoir la visite" : "Replay tour"}</span>
+                <span>Revoir la visite</span>
               </button>
 
               <button
@@ -609,7 +607,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
                 onClick={handleFinishAll}
                 className="flex-1 mansa-btn-green py-2.5 text-xs font-bold justify-center cursor-pointer shadow-sm"
               >
-                <span>{lang === "fr" ? "Valider" : "Confirm"}</span>
+                <span>Valider</span>
                 <ChevronRight className="size-4" />
               </button>
             </div>
@@ -630,7 +628,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] font-mono font-bold text-[#00D26A]">
-                  {lang === "fr" ? `Étape ${currentStepIndex + 1} sur ${TOUR_STEPS.length}` : `Step ${currentStepIndex + 1} of ${TOUR_STEPS.length}`}
+                  Étape {currentStepIndex + 1} sur {TOUR_STEPS.length}
                 </span>
               </div>
             </div>
@@ -639,7 +637,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               type="button"
               onClick={handleSkip}
               className="p-1 text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
-              title={lang === "fr" ? "Passer la visite" : "Skip tour"}
+              title="Passer la visite"
             >
               <X className="size-4" />
             </button>
@@ -648,10 +646,10 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
           {/* Body Content */}
           <div className="space-y-1.5">
             <h4 className="text-sm sm:text-base font-bold text-white tracking-tight">
-              {lang === "fr" ? step.titleFr : step.titleEn}
+              {step.titleFr}
             </h4>
             <p className="text-xs text-zinc-300 leading-relaxed">
-              {lang === "fr" ? step.descriptionFr : step.descriptionEn}
+              {step.descriptionFr}
             </p>
           </div>
 
@@ -675,7 +673,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
             </div>
 
             <span className="text-[10px] font-mono text-zinc-400">
-              {lang === "fr" ? "Raccourcis : ◀ ▶ Échap" : "Keys: ◀ ▶ Esc"}
+              Raccourcis : ◀ ▶ Échap
             </span>
           </div>
 
@@ -686,7 +684,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
               onClick={handleSkip}
               className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors font-medium px-2 py-1 cursor-pointer"
             >
-              {lang === "fr" ? "Passer" : "Skip"}
+              Passer
             </button>
 
             <div className="flex items-center gap-2">
@@ -697,7 +695,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
                   className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-white/10 bg-[#1a1c22] hover:bg-[#232630] text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer"
                 >
                   <ChevronLeft className="size-3.5" />
-                  <span>{lang === "fr" ? "Précédent" : "Back"}</span>
+                  <span>Précédent</span>
                 </button>
               )}
 
@@ -706,7 +704,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({
                 onClick={handleNext}
                 className="flex items-center gap-1.5 mansa-btn-green px-4 py-1.5 text-xs font-bold cursor-pointer shadow-sm"
               >
-                <span>{isLastStep ? (lang === "fr" ? "Terminer" : "Finish") : (lang === "fr" ? "Suivant" : "Next")}</span>
+                <span>{isLastStep ? "Terminer" : "Suivant"}</span>
                 <ChevronRight className="size-3.5" />
               </button>
             </div>

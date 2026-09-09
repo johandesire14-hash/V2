@@ -48,19 +48,19 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={onOpenMarketplace}
             className="hover:text-white transition-colors cursor-pointer font-medium"
           >
-            {lang === "fr" ? "Explorer la marketplace" : "Explore Marketplace"}
+            Explorer la marketplace
           </button>
           <a
             href="#categories"
             className="hover:text-white transition-colors"
           >
-            {lang === "fr" ? "Catégories" : "Categories"}
+            Catégories
           </a>
           <a
             href="#faq"
             className="hover:text-white transition-colors"
           >
-            {lang === "fr" ? "FAQ" : "FAQ"}
+            FAQ
           </a>
         </nav>
 
@@ -72,21 +72,20 @@ export const Header: React.FC<HeaderProps> = ({
               <CurrencySelector
                 currentCurrency={currency}
                 onSelectCurrency={onCurrencyChange}
-                lang={lang}
+                lang="fr"
                 variant="header"
               />
             </div>
           )}
 
-          {/* Language Switcher */}
-          <button
-            onClick={() => setLang(lang === "fr" ? "en" : "fr")}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-xl border border-white/10 bg-[#121318] text-zinc-300 hover:bg-white/5 hover:border-white/20 transition-colors cursor-pointer min-h-[36px]"
-            title="Switch Language"
+          {/* Language Indicator */}
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-xl border border-white/10 bg-[#121318] text-zinc-300 min-h-[36px]"
+            title="Langue : Français"
           >
-            <Globe className="size-3.5 text-zinc-400" />
-            <span>{lang.toUpperCase()}</span>
-          </button>
+            <Globe className="size-3.5 text-emerald-400" />
+            <span className="font-bold text-white">FR</span>
+          </div>
 
           {/* Quick Demo Exploration Button */}
           {onOpenDemo && (
@@ -96,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="Tester immédiatement l'application en mode Démo"
             >
               <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{lang === "fr" ? "Mode Démo" : "Demo"}</span>
+              <span>Mode Démo</span>
             </button>
           )}
 
@@ -105,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={onOpenLogin}
             className="text-xs sm:text-sm font-semibold text-zinc-300 hover:text-white transition-colors cursor-pointer px-2 sm:px-3 py-1.5"
           >
-            {lang === "fr" ? "Connexion" : "Sign in"}
+            Connexion
           </button>
 
           {/* CTA: Start Selling / Launch Product */}
@@ -114,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onOpenStudio()}
               className="mansa-btn-green px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-bold text-black rounded-xl cursor-pointer shadow-sm min-h-[36px] flex items-center gap-1.5"
             >
-              <span>{lang === "fr" ? "Créer ma boutique" : "Start Selling"}</span>
+              <span>Créer ma boutique</span>
             </button>
           )}
         </div>

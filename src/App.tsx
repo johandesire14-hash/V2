@@ -347,7 +347,7 @@ export default function App() {
             <div className="rounded-xl border border-white/10 bg-[#000000] p-4 flex items-center justify-between">
               <div>
                 <span className="text-[9px] font-bold uppercase tracking-widest text-[#B6B5B0] block">
-                  {lang === "fr" ? "Abonnement / Accès" : "Access"}
+                  Abonnement / Accès
                 </span>
                 <span className="text-2xl font-bold font-mono text-white">
                   {selectedMarketplaceProduct.priceMonthly}
@@ -363,11 +363,11 @@ export default function App() {
             <div className="space-y-2 text-xs text-[#B6B5B0] font-light">
               <div className="flex items-center gap-2">
                 <Check className="size-3.5 text-[#3DDC84] shrink-0" />
-                <span>{lang === "fr" ? "Accès instantané aux canaux et contenus" : "Instant access to channels & files"}</span>
+                <span>Accès instantané aux canaux et contenus</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="size-3.5 text-[#3DDC84] shrink-0" />
-                <span>{lang === "fr" ? "Paiement sécurisé par Mobile Money & Carte" : "Secure Mobile Money & Card payment"}</span>
+                <span>Paiement sécurisé par Mobile Money & Carte</span>
               </div>
             </div>
 
@@ -376,7 +376,7 @@ export default function App() {
                 onClick={() => setSelectedMarketplaceProduct(null)}
                 className="flex-1 py-2.5 rounded-full border border-white/10 text-[#B6B5B0] hover:text-white hover:bg-white/5 text-xs font-semibold cursor-pointer"
               >
-                {lang === "fr" ? "Fermer" : "Close"}
+                Fermer
               </button>
               <button
                 onClick={() => {
@@ -385,7 +385,7 @@ export default function App() {
                 }}
                 className="mansa-btn-green flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5 cursor-pointer font-bold"
               >
-                <span>{lang === "fr" ? "Créer une offre similaire" : "Create similar offer"}</span>
+                <span>Créer une offre similaire</span>
                 <ArrowRight className="size-3" />
               </button>
             </div>

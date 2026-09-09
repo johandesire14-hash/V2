@@ -15,35 +15,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenStudio, lang }) 
         {/* Trending tag */}
         <div className="inline-flex items-center gap-2 rounded-full border border-[#00D26A]/20 bg-[#00D26A]/10 px-3.5 py-1.5 text-xs font-semibold text-[#00D26A] mb-6">
           <span className="flex size-2 rounded-full bg-[#00D26A] animate-pulse" />
-          <span>
-            {lang === "fr"
-              ? "La plateforme tout-en-un de monétisation pour l'Afrique"
-              : "The all-in-one monetization platform for Africa"}
-          </span>
+          <span>La plateforme tout-en-un de monétisation pour l'Afrique</span>
         </div>
 
         {/* Main Headline */}
         <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.12] max-w-4xl">
-          {lang === "fr" ? (
-            <>
-              Vendez vos accès privés, formations & logiciels{" "}
-              <span className="text-[#00D26A]">
-                sans friction
-              </span>
-            </>
-          ) : (
-            <>
-              Monetize private communities, courses & tools{" "}
-              <span className="text-[#00D26A]">effortlessly</span>
-            </>
-          )}
+          Vendez vos accès privés, formations & logiciels{" "}
+          <span className="text-[#00D26A]">
+            sans friction
+          </span>
         </h1>
 
         {/* Subtitle */}
         <p className="mt-5 max-w-2xl text-base sm:text-lg text-zinc-400 font-normal leading-relaxed">
-          {lang === "fr"
-            ? "Créez votre page de vente en 2 minutes, automatisez vos invitations Telegram & Discord, et encaissez instantanément par Wave, Orange Money, MTN et Carte Bancaire."
-            : "Launch your storefront in minutes, automate Telegram & Discord memberships, and collect local Mobile Money & Card payments instantly."}
+          Créez votre page de vente en 2 minutes, automatisez vos invitations Telegram & Discord, et encaissez instantanément par Wave, Orange Money, MTN et Carte Bancaire.
         </p>
 
         {/* Action Buttons */}
@@ -52,7 +37,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenStudio, lang }) 
             onClick={() => onOpenStudio()}
             className="mansa-btn-green w-full sm:w-auto px-8 py-3.5 text-sm sm:text-base cursor-pointer font-bold flex items-center justify-center gap-2"
           >
-            <span>{lang === "fr" ? "Lancer ma boutique gratuitement" : "Start selling for free"}</span>
+            <span>Lancer ma boutique gratuitement</span>
             <ArrowRight className="size-4" />
           </button>
 
@@ -60,14 +45,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenStudio, lang }) 
             href="#marketplace"
             className="w-full sm:w-auto px-6 py-3.5 rounded-xl border border-white/10 bg-[#121318] hover:bg-white/5 text-white text-sm font-semibold transition-all text-center"
           >
-            {lang === "fr" ? "Explorer la marketplace" : "Browse marketplace"}
+            Explorer la marketplace
           </a>
         </div>
 
         {/* Real Flags & Supported Payment Methods Strip */}
         <div className="mt-12 w-full max-w-3xl rounded-2xl border border-white/10 bg-[#12131a] p-4 sm:p-5">
           <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
-            {lang === "fr" ? "Paiements locaux & internationaux acceptés" : "Accepted Local & International Payments"}
+            Paiements locaux & internationaux acceptés
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-xs text-zinc-300 font-medium">
             <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">

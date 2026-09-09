@@ -52,12 +52,10 @@ export const LiveTickerSection: React.FC<LiveTickerProps> = ({ onOpenAiBuilder, 
               <Inbox className="size-6 text-zinc-400" />
             </div>
             <h3 className="text-sm font-semibold text-white mb-1">
-              {lang === "fr" ? "Aucune transaction enregistrée pour le moment" : "No live transactions recorded yet"}
+              Aucune transaction enregistrée pour le moment
             </h3>
             <p className="text-xs text-zinc-400 max-w-md">
-              {lang === "fr"
-                ? "Les transactions de vos clients apparaîtront ici en temps réel dès vos premières ventes."
-                : "Your customers' transactions will appear here in real-time as sales come in."}
+              Les transactions de vos clients apparaîtront ici en temps réel dès vos premières ventes.
             </p>
           </div>
         ) : (

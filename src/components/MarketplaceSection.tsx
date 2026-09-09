@@ -44,12 +44,8 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
     const res = await toggleUserFavorite(userId, prod);
     setToastMessage(
       res.isFavorited
-        ? lang === "fr"
-          ? `« ${prod.title} » ajouté à vos favoris`
-          : `"${prod.title}" added to favorites`
-        : lang === "fr"
-        ? `« ${prod.title} » retiré de vos favoris`
-        : `"${prod.title}" removed from favorites`
+        ? `« ${prod.title} » ajouté à vos favoris`
+        : `« ${prod.title} » retiré de vos favoris`
     );
     setTimeout(() => setToastMessage(null), 2500);
   };
@@ -82,15 +78,13 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
           <div>
             <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-400 mb-2">
               <Sparkles className="size-3" />
-              <span>{lang === "fr" ? "Marketplace & Offres Vérifiées" : "Verified Creator Marketplace"}</span>
+              <span>Marketplace & Offres Vérifiées</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              {lang === "fr" ? "Explorer les meilleures offres" : "Discover Top Creator Offers"}
+              Explorer les meilleures offres
             </h2>
             <p className="text-sm text-zinc-400 mt-1">
-              {lang === "fr"
-                ? "Rejoignez des canaux Telegram VIP, achetez des formations et logiciels certifiés par les meilleurs créateurs."
-                : "Join VIP Telegram channels, access courses & SaaS software, or save them to your favorites."}
+              Rejoignez des canaux Telegram VIP, achetez des formations et logiciels certifiés par les meilleurs créateurs.
             </p>
           </div>
 
@@ -98,7 +92,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
             <Search className="absolute left-3.5 size-4 text-zinc-500" />
             <input
               type="text"
-              placeholder={lang === "fr" ? "Rechercher un produit, créateur..." : "Search products, creators..."}
+              placeholder="Rechercher un produit, créateur..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full sm:w-72 rounded-xl border border-white/10 bg-[#121318] pl-9 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-[#00D26A] focus:ring-1 focus:ring-[#00D26A] outline-none transition-all"
@@ -109,7 +103,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
         {/* Category Filters */}
         <div className="flex flex-wrap items-center gap-2 pb-6">
           {[
-            { id: "all", label: lang === "fr" ? "Toutes les offres" : "All Offers" },
+            { id: "all", label: "Toutes les offres" },
             { id: "trading", label: "Trading & Crypto" },
             { id: "sports", label: "Paris Sportifs" },
             { id: "courses", label: "Formations" },
@@ -148,12 +142,10 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-16 rounded-2xl border border-white/10 bg-[#12141a] p-8 space-y-3">
             <p className="text-base font-bold text-white">
-              {lang === "fr" ? "Aucune offre trouvée" : "No products found"}
+              Aucune offre trouvée
             </p>
             <p className="text-xs text-zinc-400">
-              {lang === "fr"
-                ? "Essayez de modifier votre recherche ou sélectionnez une autre catégorie."
-                : "Try adjusting your search terms or category filter."}
+              Essayez de modifier votre recherche ou sélectionnez une autre catégorie.
             </p>
             <button
               onClick={() => {
@@ -162,7 +154,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
               }}
               className="px-4 py-2 text-xs font-semibold text-zinc-300 hover:text-white border border-white/10 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer inline-block mt-2"
             >
-              {lang === "fr" ? "Réinitialiser les filtres" : "Reset filters"}
+              Réinitialiser les filtres
             </button>
           </div>
         ) : (
@@ -216,15 +208,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
                       {/* Favorite Heart Button */}
                       <button
                         onClick={(e) => handleToggleFavorite(e, prod)}
-                        title={
-                          isFav
-                            ? lang === "fr"
-                              ? "Retirer des favoris"
-                              : "Remove from favorites"
-                            : lang === "fr"
-                            ? "Ajouter aux favoris"
-                            : "Add to favorites"
-                        }
+                        title={isFav ? "Retirer des favoris" : "Ajouter aux favoris"}
                         className={`size-8 rounded-full border transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                           isFav
                             ? "bg-rose-500/15 border-rose-500/30 text-rose-400"
@@ -286,7 +270,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
                           className="px-3 py-1.5 text-xs text-zinc-300 hover:text-white border border-white/10 bg-white/5 hover:bg-white/10 rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
                         >
                           <Sparkles className="size-3 text-emerald-400" />
-                          <span>{lang === "fr" ? "Cloner" : "Clone"}</span>
+                          <span>Cloner</span>
                         </button>
                       )}
 
@@ -294,7 +278,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
                         onClick={() => onSelectProduct(prod)}
                         className="mansa-btn-green px-3.5 py-1.5 text-xs font-bold text-black flex items-center gap-1 cursor-pointer rounded-xl"
                       >
-                        <span>{lang === "fr" ? "Voir l'offre" : "View"}</span>
+                        <span>Voir l'offre</span>
                         <ArrowRight className="size-3" />
                       </button>
                     </div>
