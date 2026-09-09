@@ -1,5 +1,6 @@
 import React from "react";
-import { ArrowRight, Send, Disc as DiscordIcon, BookOpen, ShieldCheck, Zap } from "lucide-react";
+import { ArrowRight, Sparkles, ShieldCheck, Zap, CheckCircle2 } from "lucide-react";
+import { CountryFlag } from "./common/CountryFlag";
 
 interface HeroSectionProps {
   onOpenStudio: (category?: string) => void;
@@ -8,55 +9,109 @@ interface HeroSectionProps {
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenStudio, lang }) => {
   return (
-    <section className="relative flex flex-col items-center justify-center overflow-hidden bg-[#090a0f] px-6 sm:px-10 pt-16 pb-20">
-      <div className="relative z-10 mx-auto flex w-full max-w-[960px] flex-col items-center text-center">
+    <section className="relative flex flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-[#090a0f] via-[#090a0f] to-[#0d0e15] px-6 sm:px-10 pt-16 pb-20 border-b border-white/[0.04]">
+      <div className="relative z-10 mx-auto flex w-full max-w-[1040px] flex-col items-center text-center">
+        
+        {/* Trending tag */}
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#00D26A]/20 bg-[#00D26A]/10 px-3.5 py-1.5 text-xs font-semibold text-[#00D26A] mb-6">
+          <span className="flex size-2 rounded-full bg-[#00D26A] animate-pulse" />
+          <span>
+            {lang === "fr"
+              ? "La plateforme tout-en-un de monétisation pour l'Afrique"
+              : "The all-in-one monetization platform for Africa"}
+          </span>
+        </div>
+
         {/* Main Headline */}
-        <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.12] max-w-3xl">
-          {lang === "fr"
-            ? "Monétisez vos accès privés & contenus en toute simplicité"
-            : "Monetize private communities & digital products with ease"}
+        <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.12] max-w-4xl">
+          {lang === "fr" ? (
+            <>
+              Vendez vos accès privés, formations & logiciels{" "}
+              <span className="text-[#00D26A]">
+                sans friction
+              </span>
+            </>
+          ) : (
+            <>
+              Monetize private communities, courses & tools{" "}
+              <span className="text-[#00D26A]">effortlessly</span>
+            </>
+          )}
         </h1>
 
         {/* Subtitle */}
-        <p className="mt-5 max-w-xl text-base sm:text-lg text-zinc-400 font-normal leading-relaxed">
+        <p className="mt-5 max-w-2xl text-base sm:text-lg text-zinc-400 font-normal leading-relaxed">
           {lang === "fr"
-            ? "Créez votre page de vente, automatisez l'accès à vos canaux Telegram ou Discord et encaissez par Mobile Money et Carte Bancaire."
-            : "Create your storefront, automate Telegram and Discord invitations, and collect instant payments effortlessly."}
+            ? "Créez votre page de vente en 2 minutes, automatisez vos invitations Telegram & Discord, et encaissez instantanément par Wave, Orange Money, MTN et Carte Bancaire."
+            : "Launch your storefront in minutes, automate Telegram & Discord memberships, and collect local Mobile Money & Card payments instantly."}
         </p>
 
         {/* Action Buttons */}
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full max-w-md">
           <button
             onClick={() => onOpenStudio()}
-            className="mansa-btn-green w-full sm:w-auto px-8 py-3.5 text-sm sm:text-base cursor-pointer transition-all duration-200 hover:opacity-90 font-bold flex items-center justify-center gap-2"
+            className="mansa-btn-green w-full sm:w-auto px-8 py-3.5 text-sm sm:text-base cursor-pointer font-bold flex items-center justify-center gap-2"
           >
-            <span>{lang === "fr" ? "Lancer mon produit" : "Launch my product"}</span>
+            <span>{lang === "fr" ? "Lancer ma boutique gratuitement" : "Start selling for free"}</span>
             <ArrowRight className="size-4" />
           </button>
 
           <a
-            href="#categories"
-            className="w-full sm:w-auto px-6 py-3.5 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-zinc-300 hover:text-white text-sm font-medium transition-all text-center"
+            href="#marketplace"
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl border border-white/10 bg-[#121318] hover:bg-white/5 text-white text-sm font-semibold transition-all text-center"
           >
-            {lang === "fr" ? "Découvrir les modèles" : "Browse templates"}
+            {lang === "fr" ? "Explorer la marketplace" : "Browse marketplace"}
           </a>
         </div>
 
-        {/* Clean, calm stats row */}
-        <div className="mt-16 w-full max-w-2xl grid grid-cols-3 gap-4 pt-8 border-t border-white/[0.06]">
+        {/* Real Flags & Supported Payment Methods Strip */}
+        <div className="mt-12 w-full max-w-3xl rounded-2xl border border-white/10 bg-[#12131a] p-4 sm:p-5">
+          <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+            {lang === "fr" ? "Paiements locaux & internationaux acceptés" : "Accepted Local & International Payments"}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-xs text-zinc-300 font-medium">
+            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
+              <CountryFlag countryCode="CI" className="w-5 h-3.5 rounded-[2px] object-cover" />
+              <span>Wave & Orange <strong>CI</strong></span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
+              <CountryFlag countryCode="SN" className="w-5 h-3.5 rounded-[2px] object-cover" />
+              <span>Wave & Orange <strong>SN</strong></span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
+              <CountryFlag countryCode="CM" className="w-5 h-3.5 rounded-[2px] object-cover" />
+              <span>MTN MoMo <strong>CM</strong></span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
+              <CountryFlag countryCode="BJ" className="w-5 h-3.5 rounded-[2px] object-cover" />
+              <span>Moov & MTN <strong>BJ</strong></span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
+              <CountryFlag countryCode="FR" className="w-5 h-3.5 rounded-[2px] object-cover" />
+              <span>CB, Visa, Apple Pay</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
+              <CountryFlag countryCode="US" className="w-5 h-3.5 rounded-[2px] object-cover" />
+              <span>International</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Clean stats row */}
+        <div className="mt-8 w-full max-w-2xl grid grid-cols-3 gap-4 pt-6 border-t border-white/10">
           <div className="text-center">
-            <div className="text-xl sm:text-2xl font-bold text-white font-mono">100%</div>
-            <div className="text-xs text-zinc-400 mt-1">Automatisation des accès</div>
+            <div className="text-xl sm:text-2xl font-extrabold text-white font-sans">100%</div>
+            <div className="text-xs text-zinc-400 mt-0.5">Accès automatisés</div>
           </div>
 
-          <div className="text-center border-x border-white/[0.06]">
-            <div className="text-xl sm:text-2xl font-bold text-[#00D26A] font-mono">Mobile Money</div>
-            <div className="text-xs text-zinc-400 mt-1">Wave, Orange, MTN & CB</div>
+          <div className="text-center border-x border-white/10">
+            <div className="text-xl sm:text-2xl font-extrabold text-[#00D26A] font-sans">Mobile Money</div>
+            <div className="text-xs text-zinc-400 mt-0.5">Wave, Orange, MTN & CB</div>
           </div>
 
           <div className="text-center">
-            <div className="text-xl sm:text-2xl font-bold text-white font-mono">Immédiat</div>
-            <div className="text-xs text-zinc-400 mt-1">Revenus versés en direct</div>
+            <div className="text-xl sm:text-2xl font-extrabold text-white font-sans">0 € / mois</div>
+            <div className="text-xs text-zinc-400 mt-0.5">Aucun abonnement fixe</div>
           </div>
         </div>
 

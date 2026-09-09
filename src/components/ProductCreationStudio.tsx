@@ -1000,11 +1000,23 @@ export const ProductCreationStudio: React.FC<ProductCreationStudioProps> = ({
               onChange={(e) => handleCurrencyChange(e.target.value as CurrencyCode)}
               className="bg-[#1c1d22] text-[#00D26A] font-bold rounded-lg border border-white/10 px-2 py-1 outline-none text-xs cursor-pointer hover:border-white/20 transition-colors"
             >
-              {Object.keys(SUPPORTED_CURRENCIES).map((c) => (
-                <option key={c} value={c}>
-                  {SUPPORTED_CURRENCIES[c as CurrencyCode].flag} {c} ({SUPPORTED_CURRENCIES[c as CurrencyCode].symbol})
-                </option>
-              ))}
+              <optgroup label="Afrique (Sénégal, Congo, RDC, CI, Cameroun, Bénin, Rwanda...)">
+                <option value="XOF">🇸🇳 🇨🇮 🇧🇯 XOF - Franc CFA UEMOA (Sénégal, CI, Bénin...)</option>
+                <option value="XAF">🇨🇲 🇨🇬 🇬🇦 XAF - Franc CFA CEMAC (Cameroun, Congo...)</option>
+                <option value="CDF">🇨🇩 CDF - Franc congolais (RD Congo)</option>
+                <option value="RWF">🇷🇼 RWF - Franc rwandais (Rwanda)</option>
+                <option value="GNF">🇬🇳 GNF - Franc Guinéen</option>
+                <option value="NGN">🇳🇬 NGN - Naira Nigérian</option>
+                <option value="GHS">🇬🇭 GHS - Cedi Ghanéen</option>
+                <option value="KES">🇰🇪 KES - Shilling Kényan</option>
+                <option value="MAD">🇲🇦 MAD - Dirham Marocain</option>
+              </optgroup>
+              <optgroup label="International & Diaspora">
+                <option value="EUR">🇪🇺 EUR - Euro (€)</option>
+                <option value="USD">🇺🇸 USD - Dollar Américain ($)</option>
+                <option value="GBP">🇬🇧 GBP - Livre Sterling (£)</option>
+                <option value="CAD">🇨🇦 CAD - Dollar Canadien ($)</option>
+              </optgroup>
             </select>
           </div>
 

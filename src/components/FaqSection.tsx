@@ -62,29 +62,29 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
           </h2>
           <p className="text-xs sm:text-sm text-zinc-400">
             {lang === "fr"
-              ? "Tout ce que vous devez savoir pour lancer vos produits."
+              ? "Tout ce que vous devez savoir pour lancer vos produits et encaisser sans friction."
               : "Everything you need to know to get started."}
           </p>
         </div>
 
         {/* Accordion List */}
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {FAQ_ITEMS.map((faq) => {
             const isOpen = openIds.includes(faq.id);
             return (
               <div
                 key={faq.id}
-                className="rounded-xl border border-white/[0.06] bg-[#11131a] overflow-hidden"
+                className="rounded-2xl border border-white/[0.06] bg-[#12141a]/80 overflow-hidden transition-all"
               >
                 <button
                   onClick={() => toggleAccordion(faq.id)}
-                  className="w-full flex items-center justify-between p-4 text-left cursor-pointer gap-4 hover:bg-white/[0.02] transition-colors"
+                  className="w-full flex items-center justify-between p-4 sm:p-5 text-left cursor-pointer gap-4 hover:bg-white/[0.02] transition-colors"
                 >
-                  <span className="text-sm font-semibold text-white">
+                  <span className="text-sm font-bold text-white">
                     {faq.question}
                   </span>
                   <ChevronDown
-                    className={`size-4 text-zinc-400 transition-transform duration-200 shrink-0 ${
+                    className={`size-4 text-zinc-500 transition-transform duration-200 shrink-0 ${
                       isOpen ? "rotate-180 text-emerald-400" : ""
                     }`}
                   />
@@ -98,7 +98,7 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <div className="px-4 pb-4 pt-1 text-xs text-zinc-400 leading-relaxed border-t border-white/[0.03]">
+                      <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-zinc-400 leading-relaxed border-t border-white/[0.04]">
                         {faq.answer}
                       </div>
                     </motion.div>
@@ -113,10 +113,10 @@ export const FaqSection: React.FC<FaqSectionProps> = ({
         <div className="text-center pt-2">
           <button
             onClick={() => onOpenStudio && onOpenStudio()}
-            className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+            className="text-xs sm:text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
           >
-            <span>{lang === "fr" ? "Prêt à créer votre première offre ?" : "Ready to create your offer?"}</span>
-            <ArrowRight className="size-3.5" />
+            <span>{lang === "fr" ? "Prêt à créer votre première boutique ?" : "Ready to create your storefront?"}</span>
+            <ArrowRight className="size-4" />
           </button>
         </div>
       </div>

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Search, Star, ShieldCheck, ArrowRight, Filter, Sparkles, RefreshCw, Heart, Check } from "lucide-react";
+import { Search, Star, ShieldCheck, ArrowRight, Sparkles, Heart } from "lucide-react";
 import { MarketplaceItem } from "../types";
 import { MarketplaceCardSkeleton } from "./common/Skeleton";
-import { motion } from "motion/react";
 import { CURATED_MARKETPLACE_PRODUCTS } from "../data/marketplaceData";
+import { CountryFlag } from "./common/CountryFlag";
 import {
-  getUserFavorites,
   toggleUserFavorite,
   subscribeToUserFavorites,
 } from "../services/dbService";
@@ -71,17 +70,17 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
     <section id="marketplace" className="w-full bg-[#090a0f] py-16 border-t border-white/[0.04] relative">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl border border-rose-500/30 bg-[#17141f] px-4 py-3 text-xs font-semibold text-white shadow-2xl backdrop-blur-md">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-2xl border border-white/10 bg-[#12141a] px-4 py-3 text-xs font-semibold text-white shadow-2xl">
           <Heart className="size-4 fill-rose-500 text-rose-500" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      <div className="mx-auto max-w-[1100px] px-6 sm:px-10">
+      <div className="mx-auto max-w-[1140px] px-6 sm:px-10">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-400 mb-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-400 mb-2">
               <Sparkles className="size-3" />
               <span>{lang === "fr" ? "Marketplace & Offres Vérifiées" : "Verified Creator Marketplace"}</span>
             </div>
@@ -90,19 +89,19 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
             </h2>
             <p className="text-sm text-zinc-400 mt-1">
               {lang === "fr"
-                ? "Rejoignez des canaux Telegram VIP, achetez des formations et logiciels ou sauvegardez-les dans vos favoris."
+                ? "Rejoignez des canaux Telegram VIP, achetez des formations et logiciels certifiés par les meilleurs créateurs."
                 : "Join VIP Telegram channels, access courses & SaaS software, or save them to your favorites."}
             </p>
           </div>
 
           <div className="relative flex items-center">
-            <Search className="absolute left-3.5 size-3.5 text-zinc-500" />
+            <Search className="absolute left-3.5 size-4 text-zinc-500" />
             <input
               type="text"
-              placeholder={lang === "fr" ? "Rechercher un produit..." : "Search products..."}
+              placeholder={lang === "fr" ? "Rechercher un produit, créateur..." : "Search products, creators..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-64 rounded-xl border border-white/10 bg-[#12141c] pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:border-emerald-500/50 outline-none transition-all"
+              className="w-full sm:w-72 rounded-xl border border-white/10 bg-[#121318] pl-9 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:border-[#00D26A] focus:ring-1 focus:ring-[#00D26A] outline-none transition-all"
             />
           </div>
         </div>
@@ -127,10 +126,10 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
                     setSelectedCategory(cat.id);
                   }
                 }}
-                className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                className={`rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
                   isSelected
-                    ? "bg-emerald-500 text-black font-bold shadow-sm"
-                    : "border border-white/5 bg-[#12141c] text-zinc-400 hover:text-white hover:bg-white/5"
+                    ? "bg-white text-black shadow-md"
+                    : "border border-white/10 bg-white/5 text-zinc-300 hover:text-white hover:bg-white/10"
                 }`}
               >
                 {cat.label}
@@ -147,8 +146,8 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-16 rounded-2xl border border-white/[0.06] bg-[#0c0d10] p-8 space-y-3">
-            <p className="text-sm font-semibold text-white">
+          <div className="text-center py-16 rounded-2xl border border-white/10 bg-[#12141a] p-8 space-y-3">
+            <p className="text-base font-bold text-white">
               {lang === "fr" ? "Aucune offre trouvée" : "No products found"}
             </p>
             <p className="text-xs text-zinc-400">
@@ -161,7 +160,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
                 setSelectedCategory("all");
                 setSearchQuery("");
               }}
-              className="mansa-btn-dark px-4 py-2 text-xs font-semibold text-zinc-300 hover:text-white cursor-pointer inline-block mt-2"
+              className="px-4 py-2 text-xs font-semibold text-zinc-300 hover:text-white border border-white/10 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer inline-block mt-2"
             >
               {lang === "fr" ? "Réinitialiser les filtres" : "Reset filters"}
             </button>
@@ -176,26 +175,41 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
                 <div
                   key={prod.id}
                   onClick={() => onSelectProduct(prod)}
-                  className="group relative flex flex-col justify-between rounded-2xl border border-white/[0.08] bg-[#101114] p-6 transition-all duration-200 hover:-translate-y-1 hover:border-[#00D26A]/40 hover:bg-[#14161b] cursor-pointer"
+                  className="group relative flex flex-col justify-between rounded-2xl border border-white/[0.06] bg-[#12141a]/90 p-5 transition-all duration-200 hover:-translate-y-1 hover:border-emerald-500/40 hover:bg-[#161822] cursor-pointer"
                 >
                   <div>
-                    <div className="flex items-start justify-between mb-4 gap-3">
+                    <div className="flex items-start justify-between mb-3 gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <img
-                          src={prod.creatorAvatar}
-                          alt={prod.creator}
-                          className="size-10 rounded-full object-cover border border-white/10 shrink-0"
-                        />
+                        <div className="relative shrink-0">
+                          <img
+                            src={prod.creatorAvatar}
+                            alt={prod.creator}
+                            className="size-11 rounded-full object-cover border border-white/10"
+                          />
+                          {prod.countryCode && (
+                            <div className="absolute -bottom-1 -right-1 rounded-[2px] overflow-hidden shadow-xs border border-[#12141a]">
+                              <CountryFlag countryCode={prod.countryCode} className="w-4 h-3 object-cover block" />
+                            </div>
+                          )}
+                        </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-bold text-white group-hover:text-[#00D26A] transition-colors line-clamp-1">
+                            <span className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-1">
                               {prod.title}
                             </span>
                             {prod.verified && (
-                              <ShieldCheck className="size-3.5 text-emerald-400 shrink-0" />
+                              <ShieldCheck className="size-4 text-emerald-400 shrink-0" />
                             )}
                           </div>
-                          <span className="text-xs text-zinc-400 truncate block">par {prod.creator}</span>
+                          <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-0.5">
+                            <span>par {prod.creator}</span>
+                            {prod.countryCode && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-300 bg-white/5 px-1.5 py-0.2 rounded border border-white/5">
+                                <CountryFlag countryCode={prod.countryCode} className="w-3 h-2 rounded-[1px] object-cover" />
+                                {prod.countryCode}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -213,8 +227,8 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
                         }
                         className={`size-8 rounded-full border transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                           isFav
-                            ? "bg-rose-500/15 border-rose-500/40 text-rose-500 shadow-sm"
-                            : "bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 hover:border-white/20"
+                            ? "bg-rose-500/15 border-rose-500/30 text-rose-400"
+                            : "bg-white/5 border-white/10 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20"
                         }`}
                       >
                         <Heart
@@ -226,10 +240,10 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
                     </div>
 
                     <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-mono font-medium text-zinc-300 uppercase">
+                      <span className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-bold text-zinc-300 uppercase tracking-wide">
                         {prod.category}
                       </span>
-                      <div className="flex items-center gap-1 text-xs font-mono text-amber-400 font-bold bg-amber-400/10 px-2 py-1 rounded-md">
+                      <div className="flex items-center gap-1 text-xs font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-lg">
                         <Star className="size-3 fill-amber-400 text-amber-400" />
                         <span>{prod.rating}</span>
                         <span className="text-zinc-500 font-normal">
@@ -238,7 +252,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
                       </div>
                     </div>
 
-                    <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2 mb-4 font-light">
+                    <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2 mb-4">
                       {prod.description}
                     </p>
 
@@ -246,7 +260,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
                       {prod.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="rounded-md border border-white/5 bg-white/5 px-2 py-0.5 text-[10px] font-mono text-zinc-300"
+                          className="rounded-md border border-white/5 bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium text-zinc-400"
                         >
                           {tag}
                         </span>
@@ -256,8 +270,8 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
 
                   <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between gap-2">
                     <div>
-                      <span className="text-[10px] uppercase font-mono text-zinc-500 block">Tarif</span>
-                      <span className="font-mono text-sm font-bold text-white truncate max-w-[130px] block">
+                      <span className="text-[10px] uppercase font-semibold text-zinc-500 block">Tarif</span>
+                      <span className="text-sm font-extrabold text-white truncate max-w-[130px] block">
                         {prod.priceMonthly}
                       </span>
                     </div>
@@ -269,18 +283,18 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({
                             e.stopPropagation();
                             onOpenAiBuilder(prod.title, prod.category);
                           }}
-                          className="mansa-btn-dark px-3 py-1.5 text-xs text-zinc-300 hover:text-white flex items-center gap-1 cursor-pointer"
+                          className="px-3 py-1.5 text-xs text-zinc-300 hover:text-white border border-white/10 bg-white/5 hover:bg-white/10 rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
                         >
-                          <Sparkles className="size-3 text-[#00D26A]" />
+                          <Sparkles className="size-3 text-emerald-400" />
                           <span>{lang === "fr" ? "Cloner" : "Clone"}</span>
                         </button>
                       )}
 
                       <button
                         onClick={() => onSelectProduct(prod)}
-                        className="mansa-btn-green px-3 py-1.5 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                        className="mansa-btn-green px-3.5 py-1.5 text-xs font-bold text-black flex items-center gap-1 cursor-pointer rounded-xl"
                       >
-                        <span>{lang === "fr" ? "Voir" : "View"}</span>
+                        <span>{lang === "fr" ? "Voir l'offre" : "View"}</span>
                         <ArrowRight className="size-3" />
                       </button>
                     </div>

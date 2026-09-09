@@ -33,7 +33,7 @@ export const AfhubLogo: React.FC<AfhubLogoProps> = ({
   return (
     <div className={`flex items-center gap-2.5 select-none ${className}`}>
       <div
-        className={`relative overflow-hidden rounded-xl border border-white/10 bg-black ${sizeMap[size]} shrink-0 shadow-sm`}
+        className={`relative overflow-hidden rounded-xl border border-white/10 bg-black ${sizeMap[size]} shrink-0`}
       >
         <img
           src={logoImg}
@@ -48,7 +48,7 @@ export const AfhubLogo: React.FC<AfhubLogoProps> = ({
             af<span className="text-[#00D26A]">hub</span>
           </span>
           {showBadge && (
-            <span className="hidden sm:inline-flex ml-1.5 rounded-full bg-[#00D26A]/15 px-2 py-0.5 text-[9px] font-mono font-bold uppercase text-[#00D26A] border border-[#00D26A]/30">
+            <span className="hidden sm:inline-flex ml-1.5 rounded-full bg-[#00D26A]/10 px-2 py-0.5 text-[9px] font-mono font-bold uppercase text-[#00D26A] border border-[#00D26A]/20">
               Africa
             </span>
           )}

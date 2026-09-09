@@ -17,6 +17,7 @@ export const CURATED_MARKETPLACE_PRODUCTS: MarketplaceItem[] = [
     verified: true,
     memberCount: 1240,
     storeUrl: "mansa.af/p/forex-elite-africa",
+    countryCode: "CI",
   },
   {
     id: "mkt-2",
@@ -34,6 +35,7 @@ export const CURATED_MARKETPLACE_PRODUCTS: MarketplaceItem[] = [
     verified: true,
     memberCount: 2150,
     storeUrl: "mansa.af/p/alpha-bets-pro",
+    countryCode: "CM",
   },
   {
     id: "mkt-3",
@@ -51,6 +53,7 @@ export const CURATED_MARKETPLACE_PRODUCTS: MarketplaceItem[] = [
     verified: true,
     memberCount: 890,
     storeUrl: "mansa.af/p/ecommerce-afrique-mastery",
+    countryCode: "SN",
   },
   {
     id: "mkt-4",
@@ -68,6 +71,7 @@ export const CURATED_MARKETPLACE_PRODUCTS: MarketplaceItem[] = [
     verified: true,
     memberCount: 420,
     storeUrl: "mansa.af/p/mansa-automation-bot",
+    countryCode: "BJ",
   },
   {
     id: "mkt-5",
@@ -85,6 +89,7 @@ export const CURATED_MARKETPLACE_PRODUCTS: MarketplaceItem[] = [
     verified: true,
     memberCount: 610,
     storeUrl: "mansa.af/p/diaspora-invest-immo",
+    countryCode: "FR",
   },
   {
     id: "mkt-6",
@@ -102,6 +107,7 @@ export const CURATED_MARKETPLACE_PRODUCTS: MarketplaceItem[] = [
     verified: true,
     memberCount: 1850,
     storeUrl: "mansa.af/p/canva-mega-pack-afrique",
+    countryCode: "CI",
   },
   {
     id: "mkt-7",
@@ -119,6 +125,7 @@ export const CURATED_MARKETPLACE_PRODUCTS: MarketplaceItem[] = [
     verified: true,
     memberCount: 780,
     storeUrl: "mansa.af/p/ia-prompt-engineering",
+    countryCode: "BF",
   },
   {
     id: "mkt-8",
@@ -136,5 +143,6 @@ export const CURATED_MARKETPLACE_PRODUCTS: MarketplaceItem[] = [
     verified: true,
     memberCount: 940,
     storeUrl: "mansa.af/p/bilal-resell-hub",
+    countryCode: "FR",
   },
 ];

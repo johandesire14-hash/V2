@@ -137,6 +137,7 @@ export interface MarketplaceItem {
   verified?: boolean;
   memberCount?: number;
   storeUrl?: string;
+  countryCode?: string;
 }
 
 export interface FavoriteItem {
@@ -158,6 +159,7 @@ export interface FavoriteItem {
   memberCount?: number;
   storeUrl?: string;
   currency?: string;
+  countryCode?: string;
 }
 
 export interface TelegramChannelItem {

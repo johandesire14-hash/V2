@@ -92,16 +92,17 @@ const AVAILABLE_PAYMENTS: PaymentOption[] = [
 ];
 
 const POPULAR_CURRENCIES: Array<{ code: CurrencyCode; label: string; flag: string }> = [
-  { code: "XOF", label: "Franc CFA UEMOA (XOF - FCFA)", flag: "🇨🇮 🇸🇳" },
-  { code: "XAF", label: "Franc CFA CEMAC (XAF - FCFA)", flag: "🇨🇲 🇬🇦" },
-  { code: "EUR", label: "Euro (EUR - €)", flag: "🇪🇺" },
-  { code: "USD", label: "Dollar Américain (USD - $)", flag: "🇺🇸" },
-  { code: "GNF", label: "Franc Guinéen (GNF - FG)", flag: "🇬🇳" },
-  { code: "NGN", label: "Naira Nigérian (NGN - ₦)", flag: "🇳🇬" },
-  { code: "GHS", label: "Cedi Ghanéen (GHS - GH₵)", flag: "🇬🇭" },
-  { code: "KES", label: "Shilling Kényan (KES - KSh)", flag: "🇰🇪" },
-  { code: "CDF", label: "Franc Congolais (CDF - FC)", flag: "🇨🇩" },
-  { code: "MAD", label: "Dirham Marocain (MAD - DH)", flag: "🇲🇦" },
+  { code: "XOF", label: "Franc CFA UEMOA (Sénégal, Côte d'Ivoire, Bénin...)", flag: "🇸🇳 🇨🇮 🇧🇯" },
+  { code: "XAF", label: "Franc CFA CEMAC (Cameroun, Congo, Gabon...)", flag: "🇨🇲 🇨🇬 🇬🇦" },
+  { code: "CDF", label: "Franc Congolais (RD Congo / RDC - FC)", flag: "🇨🇩" },
+  { code: "RWF", label: "Franc Rwandais (Rwanda - FRw)", flag: "🇷🇼" },
+  { code: "EUR", label: "Euro (France & Diaspora - €)", flag: "🇪🇺" },
+  { code: "USD", label: "Dollar Américain (International - $)", flag: "🇺🇸" },
+  { code: "GNF", label: "Franc Guinéen (Guinée - GNF)", flag: "🇬🇳" },
+  { code: "NGN", label: "Naira Nigérian (Nigéria - ₦)", flag: "🇳🇬" },
+  { code: "GHS", label: "Cedi Ghanéen (Ghana - GH₵)", flag: "🇬🇭" },
+  { code: "KES", label: "Shilling Kényan (Kenya - KSh)", flag: "🇰🇪" },
+  { code: "MAD", label: "Dirham Marocain (Maroc - DH)", flag: "🇲🇦" },
 ];
 
 export const CompanyOnboardingModal: React.FC<CompanyOnboardingModalProps> = ({

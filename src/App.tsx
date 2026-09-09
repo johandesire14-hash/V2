@@ -218,20 +218,20 @@ export default function App() {
 
   // Tous les visiteurs arrivent d’abord sur la landing page publique.
   return (
-    <div id="home" className="min-h-screen bg-[#000000] text-[#F1F1F1] flex flex-col font-sans selection:bg-[#3DDC84]/20 selection:text-[#3DDC84]">
+    <div id="home" className="min-h-screen bg-[#000000] text-white flex flex-col font-sans selection:bg-[#00D26A]/30 selection:text-white">
       {/* Top Banner if user is logged in */}
       {currentUser && (
-        <div className="bg-[#151515] border-b border-[#3DDC84]/20 text-[#3DDC84] px-4 py-2 text-xs font-semibold flex items-center justify-between">
+        <div className="bg-[#12141a] border-b border-white/10 text-zinc-300 px-4 py-2 text-xs font-semibold flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="size-2 rounded-full bg-[#3DDC84] animate-pulse" />
-            <span className="text-[#B6B5B0]">Connecté en tant que <strong className="text-white">{currentUser.name}</strong> ({currentUser.email})</span>
+            <span className="size-2 rounded-full bg-[#00D26A] animate-pulse" />
+            <span className="text-zinc-400">Connecté en tant que <strong className="text-white">{currentUser.name}</strong> ({currentUser.email})</span>
           </div>
           <button
             onClick={() => setCurrentView("dashboard")}
-            className="text-[#3DDC84] hover:text-[#2FB86A] transition-colors flex items-center gap-1.5 cursor-pointer font-bold"
+            className="text-[#00D26A] hover:text-[#00E575] transition-colors flex items-center gap-1.5 cursor-pointer font-bold"
           >
             <LayoutDashboard className="size-3.5" />
-            <span>Tableau de Bord Mansa &rarr;</span>
+            <span>Tableau de Bord afhub &rarr;</span>
           </button>
         </div>
       )}
